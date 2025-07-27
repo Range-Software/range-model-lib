@@ -1,7 +1,7 @@
 #ifndef RML_PATCH_H
 #define RML_PATCH_H
 
-#include <qtypes.h>
+#include <QtCore/QtGlobal>
 
 #include <rbl_uvector.h>
 
