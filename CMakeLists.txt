@@ -158,11 +158,10 @@ target_include_directories(range-model-lib
 )
 
 target_link_libraries(range-model-lib
-    PRIVATE
+    PUBLIC
+        range-base-lib
+        TetGen
         OpenMP::OpenMP_CXX
-        Qt6::Core
         Qt6::Gui
         common_defines
-        TetGen
-        range-base-lib
 )
