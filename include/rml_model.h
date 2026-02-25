@@ -895,7 +895,7 @@ class RModel : public RProblem, public RResults
 
         //! Fill node vector to element vector values.
         void convertNodeToElementVector(const RRVector &nodeValues,
-                                        RRVector &elementValues);
+                                        RRVector &elementValues) const;
 
         //! Clear boundary conditions.
         void clearBoundaryConditions();

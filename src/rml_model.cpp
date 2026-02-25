@@ -1215,8 +1215,13 @@ uint RModel::mergeNearNodes(double tolerance)
             {
                 this->mergeNodes(i,nodeID,false,true);
                 nMerged++;
+                // Do not increment nodeID: after removal the next node has
+                // shifted down into the current position.
             }
-            nodeID++;
+            else
+            {
+                nodeID++;
+            }
         }
     }
 
@@ -1229,7 +1234,6 @@ uint RModel::removeDuplicateElements()
 {
     RBVector elementBook(this->getNElements(),false);
 
-#pragma omp parallel for default(shared)
     for(int64_t i=0;i<this->getNElements();i++)
     {
         if (elementBook[uint(i)])
@@ -4688,6 +4692,11 @@ QList<uint> RModel::findNodeEdgeRing(uint nodeID) const
 
 double RModel::findMinimumNodeDistance() const
 {
+    if (this->getNNodes() < 2)
+    {
+        return 0.0;
+    }
+
     double minDistance = 0.0;
     bool first = true;
 
@@ -6982,7 +6991,7 @@ void RModel::convertElementToNodeVector(const RRVector &elementValues,
 
 
 void RModel::convertNodeToElementVector(const RRVector &nodeValues,
-                                        RRVector &elementValues)
+                                        RRVector &elementValues) const
 {
     elementValues.resize(this->getNElements(),0.0);
 
@@ -7000,9 +7009,9 @@ void RModel::convertNodeToElementVector(const RRVector &nodeValues,
             uint elementID = rPoint.get(uint(j));
             elementValues[elementID] = 0.0;
             const RElement &element = this->getElement(elementID);
-            for (uint j=0;j<element.size();j++)
+            for (uint k=0;k<element.size();k++)
             {
-                elementValues[elementID] += nodeValues[element.getNodeId(j)];
+                elementValues[elementID] += nodeValues[element.getNodeId(k)];
             }
             elementValues[elementID] /= element.size();
         }
@@ -7021,9 +7030,9 @@ void RModel::convertNodeToElementVector(const RRVector &nodeValues,
             uint elementID = rLine.get(uint(j));
             elementValues[elementID] = 0.0;
             const RElement &element = this->getElement(elementID);
-            for (uint j=0;j<element.size();j++)
+            for (uint k=0;k<element.size();k++)
             {
-                elementValues[elementID] += nodeValues[element.getNodeId(j)];
+                elementValues[elementID] += nodeValues[element.getNodeId(k)];
             }
             elementValues[elementID] /= element.size();
         }
@@ -7042,9 +7051,9 @@ void RModel::convertNodeToElementVector(const RRVector &nodeValues,
             uint elementID = rSurface.get(uint(j));
             elementValues[elementID] = 0.0;
             const RElement &element = this->getElement(elementID);
-            for (uint j=0;j<element.size();j++)
+            for (uint k=0;k<element.size();k++)
             {
-                elementValues[elementID] += nodeValues[element.getNodeId(j)];
+                elementValues[elementID] += nodeValues[element.getNodeId(k)];
             }
             elementValues[elementID] /= element.size();
         }
@@ -7059,9 +7068,9 @@ void RModel::convertNodeToElementVector(const RRVector &nodeValues,
             uint elementID = rVolume.get(uint(j));
             elementValues[elementID] = 0.0;
             const RElement &element = this->getElement(elementID);
-            for (uint j=0;j<element.size();j++)
+            for (uint k=0;k<element.size();k++)
             {
-                elementValues[elementID] += nodeValues[element.getNodeId(j)];
+                elementValues[elementID] += nodeValues[element.getNodeId(k)];
             }
             elementValues[elementID] /= element.size();
         }
