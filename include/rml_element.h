@@ -236,7 +236,7 @@ class RElement
 
         //! Find line segments.
         //! For line element this function will return list of segments which represent line of element.
-        void segmentize(const std::vector <RNode> &nodes, QList<RSegment> segments) const;
+        void segmentize(const std::vector <RNode> &nodes, QList<RSegment> &segments) const;
 
         //! Find line segments.
         //! For line element this function will return list of segments which represent line of element.

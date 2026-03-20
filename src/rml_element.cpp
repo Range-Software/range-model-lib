@@ -1403,7 +1403,7 @@ unsigned int RElement::findIntersectedSide(const std::vector<RNode> &nodes,
 } /* RElement::findIntersectedSide */
 
 
-void RElement::segmentize(const std::vector<RNode> &nodes, QList<RSegment> segments) const
+void RElement::segmentize(const std::vector<RNode> &nodes, QList<RSegment> &segments) const
 {
     switch (this->type)
     {
