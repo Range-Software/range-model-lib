@@ -136,18 +136,15 @@ class RSparseVector
         //! If value with given index already exist value will be added to its current value.
         void addValue(uint index, T value)
         {
-            typename std::vector< RSparseVectorItem<T> >::iterator iter;
-            RSparseVectorItem<T> match(index,value);
-
-            iter = std::find(this->data.begin(),this->data.end(),match);
-            if (iter == this->data.end())
+            RSparseVectorItem<T> key(index, T{});
+            auto it = std::lower_bound(this->data.begin(), this->data.end(), key);
+            if (it != this->data.end() && it->index == index)
             {
-                this->data.push_back(RSparseVectorItem<T>(index,value));
-                std::sort(this->data.begin(),this->data.end());
+                it->value += value;
             }
             else
             {
-                iter->value += value;
+                this->data.insert(it, RSparseVectorItem<T>(index, value));
             }
         }
 
@@ -173,10 +170,22 @@ class RSparseVector
         //! Vector add operation.
         void addVector(const RSparseVector<T> &v)
         {
-            for (uint i=0;i<v.size();i++)
+            if (v.data.empty()) return;
+            if (this->data.empty()) { this->data = v.data; return; }
+
+            std::vector< RSparseVectorItem<T> > merged;
+            merged.reserve(this->data.size() + v.data.size());
+            auto it1 = this->data.cbegin();
+            auto it2 = v.data.cbegin();
+            while (it1 != this->data.cend() && it2 != v.data.cend())
             {
-                this->addValue(v.getIndex(i),v.getValue(i));
+                if (it1->index < it2->index)      { merged.push_back(*it1++); }
+                else if (it2->index < it1->index) { merged.push_back(*it2++); }
+                else { merged.push_back(*it1++); merged.back().value += it2->value; ++it2; }
             }
+            merged.insert(merged.end(), it1, this->data.cend());
+            merged.insert(merged.end(), it2, v.data.cend());
+            this->data = std::move(merged);
         }
 
         //! Reserve vector size.
