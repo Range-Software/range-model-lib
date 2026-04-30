@@ -8,3 +8,9 @@ Version 1.0.0
 - RSparseVector::addVector(): loop of per-entry addValue() calls replaced with a
   two-pointer O(n+m) sorted merge; eliminates the dominant cost in the per-thread
   matrix reduction loop in all solvers.
+- RSparseVector/RSparseMatrix: added APIs to zero numeric values while
+  preserving sparse indexes, add values by cached sparse position, and merge
+  values for matrices with identical sparsity patterns. These support reusable
+  sparse matrix patterns in solver assembly.
+- RSparseMatrix::findColumnPosition(): lookup now delegates to the sorted sparse
+  vector binary search instead of copying row indexes and scanning them linearly.

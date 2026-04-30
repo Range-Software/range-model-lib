@@ -48,6 +48,17 @@ void RSparseMatrix::addMatrix(const RSparseMatrix &A)
     }
 }
 
+void RSparseMatrix::addMatrixValues(const RSparseMatrix &A)
+{
+    R_ERROR_ASSERT(this->getNRows() == A.getNRows());
+
+    for (uint i=0;i<this->getNRows();i++)
+    {
+        R_ERROR_ASSERT(this->data.at(i).size() == A.getVector(i).size());
+        this->data.at(i).addVectorValues(A.getVector(i));
+    }
+}
+
 uint RSparseMatrix::getNRows(void) const
 {
     return uint(this->data.size());
@@ -90,6 +101,11 @@ void RSparseMatrix::addValue(uint rowIndex, uint columnIndex, double value)
     this->data[rowIndex].addValue(columnIndex,value);
 }
 
+void RSparseMatrix::addValueAtPosition(uint rowIndex, uint columnPosition, double value)
+{
+    this->data[rowIndex].addValueAtPosition(columnPosition,value);
+}
+
 double RSparseMatrix::findValue(uint rowIndex, uint columnIndex) const
 {
     uint pos = 0;
@@ -108,18 +124,17 @@ void RSparseMatrix::clear(void)
     }
 }
 
+void RSparseMatrix::fillValues(double value)
+{
+    for (uint i=0;i<this->data.size();i++)
+    {
+        this->data[i].fillValues(value);
+    }
+}
+
 bool RSparseMatrix::findColumnPosition(uint rowIndex, uint columnIndex, uint &rowPosition) const
 {
-    std::vector<uint> columnIndexes = this->getRowIndexes(rowIndex);
-    for (uint i=0;i<columnIndexes.size();i++)
-    {
-        if (columnIndexes[i] == columnIndex)
-        {
-            rowPosition = i;
-            return true;
-        }
-    }
-    return false;
+    return this->data[rowIndex].findPosition(columnIndex,rowPosition);
 }
 
 uint RSparseMatrix::findMaxColumnIndex(void) const

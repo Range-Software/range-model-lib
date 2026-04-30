@@ -111,6 +111,12 @@ class RSparseVector
             return this->data[position].value;
         }
 
+        //! Add value at given sparse-vector storage position.
+        void addValueAtPosition(uint position, T value)
+        {
+            this->data[position].value += value;
+        }
+
         //! Return index at given position.
         uint getIndex(uint position) const
         {
@@ -186,6 +192,37 @@ class RSparseVector
             merged.insert(merged.end(), it1, this->data.cend());
             merged.insert(merged.end(), it2, v.data.cend());
             this->data = std::move(merged);
+        }
+
+        //! Add vector values assuming both sparse vectors have the same index pattern.
+        void addVectorValues(const RSparseVector<T> &v)
+        {
+            for (uint i=0;i<this->data.size();i++)
+            {
+                this->data[i].value += v.data[i].value;
+            }
+        }
+
+        //! Fill values while preserving sparse indexes.
+        void fillValues(T value)
+        {
+            for (uint i=0;i<this->data.size();i++)
+            {
+                this->data[i].value = value;
+            }
+        }
+
+        //! Find position for given index.
+        bool findPosition(uint index, uint &position) const
+        {
+            RSparseVectorItem<T> key(index, T{});
+            auto it = std::lower_bound(this->data.begin(), this->data.end(), key);
+            if (it != this->data.end() && it->index == index)
+            {
+                position = uint(it - this->data.begin());
+                return true;
+            }
+            return false;
         }
 
         //! Reserve vector size.

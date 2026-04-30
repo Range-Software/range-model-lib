@@ -62,14 +62,23 @@ class RSparseMatrix
         //! If value with given row and column indexes already exist given value will be added to its current value.
         void addValue(uint rowIndex, uint columnIndex, double value);
 
+        //! Add value at given sparse row storage position.
+        void addValueAtPosition(uint rowIndex, uint columnPosition, double value);
+
         //! Find value at given row and column index. If value is not found 0.0 is returned.
         double findValue(uint rowIndex, uint columnIndex) const;
 
         //! Add matrix operation.
         void addMatrix(const RSparseMatrix &A);
 
+        //! Add matrix values assuming both sparse matrices have the same index pattern.
+        void addMatrixValues(const RSparseMatrix &A);
+
         //! Clear all values.
         void clear(void);
+
+        //! Fill all values while preserving sparse indexes.
+        void fillValues(double value);
 
         //! Find column position.
         bool findColumnPosition(uint rowIndex, uint columnIndex, uint &rowPosition) const;
