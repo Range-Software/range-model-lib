@@ -1,4 +1,5 @@
 #include <cmath>
+#include <numbers>
 #include <vector>
 
 #include "rml_shape_generator.h"
@@ -37,7 +38,7 @@ RModelRaw RShapeGenerator::generateArrow(const RR3Vector &v1, const RR3Vector &v
     static constexpr uint nSides = 16;
     static constexpr double xRim    = 1.0/2.0;
     static constexpr double radius  = 1.0/6.0;
-    static constexpr double twoPi   = 2.0 * M_PI;
+    static constexpr double twoPi   = 2.0 * std::numbers::pi;
 
     RModelRaw arrow;
 
