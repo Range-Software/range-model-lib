@@ -14,3 +14,6 @@ Version 1.0.0
   sparse matrix patterns in solver assembly.
 - RSparseMatrix::findColumnPosition(): lookup now delegates to the sorted sparse
   vector binary search instead of copying row indexes and scanning them linearly.
+- RShapeGenerator::generateArrow(): hardcoded 8-point octagonal cone replaced
+  with a parametric cos/sin loop over 16 sides, doubling cone smoothness while
+  reducing code size.
