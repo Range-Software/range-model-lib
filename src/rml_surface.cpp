@@ -236,11 +236,13 @@ void RSurface::findAverageNormal(const std::vector<RNode> &nodes, const std::vec
         const RElement &rElement = elements[this->get(i)];
 
         RR3Vector elementNormal;
-        if (rElement.findNormal(nodes,elementNormal[0],elementNormal[1],elementNormal[2]))
+        double elementArea = 0.0;
+        if (rElement.findNormal(nodes,elementNormal[0],elementNormal[1],elementNormal[2]) &&
+            rElement.findArea(nodes,elementArea))
         {
-            normal[0] += elementNormal[0];
-            normal[1] += elementNormal[1];
-            normal[2] += elementNormal[2];
+            normal[0] += elementNormal[0] * elementArea;
+            normal[1] += elementNormal[1] * elementArea;
+            normal[2] += elementNormal[2] * elementArea;
         }
     }
     normal.normalize();

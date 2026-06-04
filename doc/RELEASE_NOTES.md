@@ -1,5 +1,7 @@
 ## Version 1.0.0
 
+### Improvements
+
 - **RSparseVector::addValue():** linear search (`std::find`) and full re-sort on every
   new entry replaced with binary search (`std::lower_bound`) and a single sorted
   insert, reducing per-call complexity from O(n log n) to O(log n + n) while
@@ -16,3 +18,7 @@
 - **RShapeGenerator::generateArrow():** hardcoded 8-point octagonal cone replaced
   with a parametric cos/sin loop over 16 sides, doubling cone smoothness while
   reducing code size.
+
+### Bug fixes
+
+- **RSurface::findAverageNormal():** now weights each element's normal by its area instead of averaging all normals equally.
