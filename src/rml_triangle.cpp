@@ -1,5 +1,6 @@
 #include <QList>
 
+#include <algorithm>
 #include <cmath>
 
 #include <rbl_r3vector.h>
@@ -341,28 +342,7 @@ double RTriangle::findLongestEdgeLength(void) const
     double l2 = this->node3.getDistance(this->node1);
     double l3 = this->node1.getDistance(this->node2);
 
-    if (l1 < l2)
-    {
-        if (l1 < l3)
-        {
-            return l1;
-        }
-        else
-        {
-            return l3;
-        }
-    }
-    else
-    {
-        if (l2 < l3)
-        {
-            return l2;
-        }
-        else
-        {
-            return l3;
-        }
-    }
+    return std::max(l1,std::max(l2,l3));
 }
 
 double RTriangle::findArea(void) const
