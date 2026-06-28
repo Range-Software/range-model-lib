@@ -1,3 +1,15 @@
+## Version 1.0.1
+
+### Improvements
+
+- Added unit tests based on QTest framework
+
+### Bug fixes
+
+- **RTriangle::findLongestEdgeLength():** now returns the longest edge.
+
+---
+
 ## Version 1.0.0
 
 ### Improvements
