@@ -3,12 +3,22 @@
 #include <QJsonArray>
 
 #include <rbl_error.h>
+#include <rbl_logger.h>
 
 #include "rml_material.h"
 #include "rml_file_io.h"
 #include "rml_file_manager.h"
 
 const RVersion RMaterial::version = RVersion(FILE_MAJOR_VERSION,FILE_MINOR_VERSION,FILE_RELEASE_VERSION);
+
+const QString RMaterial::File::Json::name = "JSON";
+const QString RMaterial::File::Json::extension = "json";
+
+const QString RMaterial::File::Binary::name = "Binary";
+const QString RMaterial::File::Binary::extension = "rbmt";
+
+const QString RMaterial::File::Ascii::name = "ASCII";
+const QString RMaterial::File::Ascii::extension = "ramt";
 
 static bool propertyTypeCompareFunc(const RMaterialProperty &p1,const RMaterialProperty &p2);
 
@@ -22,32 +32,28 @@ void RMaterial::_init (const RMaterial *pMaterial)
         this->state = pMaterial->state;
         this->properties = pMaterial->properties;
     }
-} /* RMaterial::_init */
-
+}
 
 RMaterial::RMaterial(State state)
 {
     this->setState(state);
     this->_init();
-} /* RMaterial::RMaterial */
-
+}
 
 RMaterial::RMaterial(const RMaterial &material)
 {
     this->_init (&material);
-} /* RMaterial::RMaterial (copy) */
-
+}
 
 RMaterial::~RMaterial()
 {
-} /* RMaterial::~RMaterial */
-
+}
 
 RMaterial &RMaterial::operator =(const RMaterial &material)
 {
     this->_init(&material);
     return (*this);
-} /* RMaterial::operator = */
+}
 
 bool RMaterial::propertiesEqual(const RMaterial &material) const
 {
@@ -63,50 +69,42 @@ bool RMaterial::propertiesEqual(const RMaterial &material) const
         }
     }
     return true;
-} /* RMaterial::propertiesEqual */
-
+}
 
 QUuid RMaterial::getID() const
 {
     return this->id;
-} /* RMaterial::getID */
-
+}
 
 void RMaterial::setID(QUuid id)
 {
     this->id = id;
-} /* RMaterial::setID */
-
+}
 
 const QString &RMaterial::getName() const
 {
     return this->name;
-} /* RMaterial::getName */
-
+}
 
 void RMaterial::setName(const QString &name)
 {
     this->name = name;
-} /* RMaterial::setName */
-
+}
 
 RMaterial::State RMaterial::getState() const
 {
     return this->state;
-} /* RMaterial::getState */
-
+}
 
 void RMaterial::setState(State state)
 {
     this->state = state;
-} /* RMaterial::setState */
-
+}
 
 uint RMaterial::size() const
 {
     return (uint)this->properties.size();
-} /* RMaterial::size */
-
+}
 
 bool RMaterial::add(const RMaterialProperty &property)
 {
@@ -125,28 +123,24 @@ bool RMaterial::add(const RMaterialProperty &property)
         this->properties[position] = property;
         return false;
     }
-} /* RMaterial::add */
-
+}
 
 const RMaterialProperty &RMaterial::get(uint position) const
 {
     R_ERROR_ASSERT (position < this->size());
     return this->properties[position];
-} /* RMaterial::get */
-
+}
 
 RMaterialProperty &RMaterial::get(uint position)
 {
     R_ERROR_ASSERT (position < this->size());
     return this->properties[position];
-} /* RMaterial::get */
-
+}
 
 void RMaterial::remove(uint position)
 {
     this->properties.remove(position);
-} /* RMaterial::remove */
-
+}
 
 void RMaterial::clear()
 {
@@ -154,8 +148,7 @@ void RMaterial::clear()
     this->name.clear();
     this->state = None;
     this->properties.clear();
-} /* RMaterial::clear */
-
+}
 
 uint RMaterial::findPosition(RMaterialProperty::Type type) const
 {
@@ -171,8 +164,7 @@ uint RMaterial::findPosition(RMaterialProperty::Type type) const
     }
 
     return this->size();
-} /* RMaterial::find_position */
-
+}
 
 bool RMaterial::hasProperties(const QList<RMaterialProperty::Type> &propertyTypes) const
 {
@@ -189,8 +181,7 @@ bool RMaterial::hasProperties(const QList<RMaterialProperty::Type> &propertyType
         }
     }
     return true;
-} /* RMaterial::hasProperties */
-
+}
 
 RMaterial RMaterial::generateDefault()
 {
@@ -206,8 +197,7 @@ RMaterial RMaterial::generateDefault()
     }
 
     return material;
-} /* RMaterial::generateDefault */
-
+}
 
 RMaterial RMaterial::fromJson(const QJsonObject &json)
 {
@@ -239,8 +229,7 @@ RMaterial RMaterial::fromJson(const QJsonObject &json)
     }
 
     return material;
-} /* RMaterial::fromJson */
-
+}
 
 QJsonObject RMaterial::toJson() const
 {
@@ -259,8 +248,7 @@ QJsonObject RMaterial::toJson() const
     jObject["properties"] = jArray;
 
     return jObject;
-} /* RMaterial::toJson */
-
+}
 
 void RMaterial::read(const QString &fileName)
 {
@@ -269,15 +257,19 @@ void RMaterial::read(const QString &fileName)
         throw RError(RError::Type::InvalidFileName,R_ERROR_REF,"No file name was provided.");
     }
 
-    QString ext = RFileManager::getExtension(fileName);
+    QString ext = RFileManager::getExtension(fileName).toLower();
 
     try
     {
-        if (ext == RMaterial::getDefaultFileExtension(false))
+        if (ext == RMaterial::File::Json::extension)
+        {
+            this->readJson(fileName);
+        }
+        else if (ext == RMaterial::File::Ascii::extension)
         {
             this->readAscii(fileName);
         }
-        else if (ext == RMaterial::getDefaultFileExtension(true))
+        else if (ext == RMaterial::File::Binary::extension)
         {
             this->readBinary(fileName);
         }
@@ -298,8 +290,7 @@ void RMaterial::read(const QString &fileName)
     {
         throw RError(RError::Type::Application,R_ERROR_REF, "Unknown exception.");
     }
-} /* RMaterial::read */
-
+}
 
 void RMaterial::write(const QString &fileName) const
 {
@@ -308,15 +299,19 @@ void RMaterial::write(const QString &fileName) const
         throw RError(RError::Type::InvalidFileName,R_ERROR_REF,"No file was name provided.");
     }
 
-    QString ext = RFileManager::getExtension(fileName);
+    QString ext = RFileManager::getExtension(fileName).toLower();
 
     try
     {
-        if (ext == RMaterial::getDefaultFileExtension(false))
+        if (ext == RMaterial::File::Json::extension)
+        {
+            this->writeJson(fileName);
+        }
+        else if (ext == RMaterial::File::Ascii::extension)
         {
             this->writeAscii(fileName);
         }
-        else if (ext == RMaterial::getDefaultFileExtension(true))
+        else if (ext == RMaterial::File::Binary::extension)
         {
             this->writeBinary(fileName);
         }
@@ -337,8 +332,7 @@ void RMaterial::write(const QString &fileName) const
     {
         throw RError(RError::Type::Application,R_ERROR_REF, "Unknown exception.");
     }
-} /* RMaterial::write */
-
+}
 
 void RMaterial::import(const QString &fileName)
 {
@@ -492,33 +486,41 @@ void RMaterial::import(const QString &fileName)
     {
         throw RError(RError::Type::Application,R_ERROR_REF, "Unknown exception.");
     }
-} /* RMaterial::import */
-
-
-QString RMaterial::findMaterialFileName(bool binary) const
-{
-    return this->getID().toString(QUuid::WithoutBraces) + QString(".") + RMaterial::getDefaultFileExtension(binary);
-} /* RMaterial::findMaterialFileName */
-
+}
 
 bool RMaterial::validForProblemType(RProblemTypeMask problemTypeMask) const
 {
     return this->hasProperties(RMaterialProperty::getTypes(problemTypeMask));
-} /* RMaterial::findMaterialFileName */
+}
 
-
-QString RMaterial::getDefaultFileExtension(bool binary)
+QString RMaterial::getDefaultFileExtension()
 {
-    if (binary)
-    {
-        return "rbmt";
-    }
-    else
-    {
-        return "ramt";
-    }
-} /* RMaterial::getDefaultFileExtension */
+    return RMaterial::File::Binary::extension;
+}
 
+void RMaterial::readJson(const QString &fileName)
+{
+    if (fileName.isEmpty())
+    {
+        throw RError(RError::Type::InvalidFileName,R_ERROR_REF,"No file name was provided.");
+    }
+
+    QFile file(fileName);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        throw RError(RError::Type::OpenFile,R_ERROR_REF,"Failed to open the file \"%s\".",fileName.toUtf8().constData());
+    }
+
+    RLogger::info("Reading JSON file \"%s\"\n",fileName.toUtf8().constData());
+    RLogger::indent();
+
+    QByteArray byteArray = file.readAll();
+    RLogger::info("Successfuly read \"%ld\" bytes from \"%s\".\n",byteArray.size(),file.fileName().toUtf8().constData());
+
+    this->fromJson(QJsonDocument::fromJson(byteArray).object());
+
+    file.close();
+}
 
 void RMaterial::readAscii(const QString &fileName)
 {
@@ -548,8 +550,7 @@ void RMaterial::readAscii(const QString &fileName)
     RFileIO::readAscii(materialFile,*this);
 
     materialFile.close();
-} /* RMaterial::readAscii */
-
+}
 
 void RMaterial::readBinary(const QString &fileName)
 {
@@ -579,8 +580,30 @@ void RMaterial::readBinary(const QString &fileName)
     RFileIO::readBinary(materialFile,*this);
 
     materialFile.close();
-} /* RMaterial::readBinary */
+}
 
+void RMaterial::writeJson(const QString &fileName) const
+{
+    if (fileName.isEmpty())
+    {
+        throw RError(RError::Type::InvalidFileName,R_ERROR_REF,"No file name was provided.");
+    }
+
+    QSaveFile file(fileName);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
+    {
+        throw RError(RError::Type::OpenFile,R_ERROR_REF,"Failed to open the file \"%s\".",fileName.toUtf8().constData());
+    }
+
+    RLogger::info("Writing JSON file \"%s\"\n",fileName.toUtf8().constData());
+    RLogger::indent();
+
+    qint64 bytesOut = file.write(QJsonDocument(this->toJson()).toJson());
+
+    RLogger::info("Successfuly wrote \"%ld\" bytes to \"%s\".\n",bytesOut,file.fileName().toUtf8().constData());
+
+    file.commit();
+}
 
 void RMaterial::writeAscii(const QString &fileName) const
 {
@@ -600,8 +623,7 @@ void RMaterial::writeAscii(const QString &fileName) const
     RFileIO::writeAscii(materialFile,*this);
 
     materialFile.commit();
-} /* RMaterial::writeAscii */
-
+}
 
 void RMaterial::writeBinary(const QString &fileName) const
 {
@@ -621,8 +643,7 @@ void RMaterial::writeBinary(const QString &fileName) const
     RFileIO::writeBinary(materialFile,*this);
 
     materialFile.commit();
-} /* RMaterial::writeBinary */
-
+}
 
 static bool propertyTypeCompareFunc(const RMaterialProperty &p1,const RMaterialProperty &p2)
 {

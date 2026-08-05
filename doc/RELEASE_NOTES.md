@@ -1,3 +1,11 @@
+## Version 1.2.0
+
+### Improvements
+
+- **RMaterial** added support for JSON file format
+
+---
+
 ## Version 1.0.1
 
 ### Improvements

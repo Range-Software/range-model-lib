@@ -24,6 +24,25 @@ class RMaterial
             nTypes
         };
 
+        struct File
+        {
+            struct Json
+            {
+                static const QString name;
+                static const QString extension;
+            };
+            struct Binary
+            {
+                static const QString name;
+                static const QString extension;
+            };
+            struct Ascii
+            {
+                static const QString name;
+                static const QString extension;
+            };
+        };
+
     private:
 
         //! Internal initialization function.
@@ -128,22 +147,25 @@ class RMaterial
         //! Import legacy material.
         void import(const QString &fileName);
 
-        //! Find material file name.
-        QString findMaterialFileName(bool binary = true) const;
-
         //! Validate material's properties against problem type.
         bool validForProblemType(RProblemTypeMask problemTypeMask) const;
 
         //! Return default file extension.
-        static QString getDefaultFileExtension(bool binary = true);
+        static QString getDefaultFileExtension();
 
     protected:
+
+        //! Read from the Json file.
+        void readJson(const QString &fileName);
 
         //! Read from the ASCII file.
         void readAscii(const QString &fileName);
 
         //! Read from the binary file.
         void readBinary(const QString &fileName);
+
+        //! Write to the Json file.
+        void writeJson(const QString &fileName) const;
 
         //! Write to the ASCII file.
         void writeAscii(const QString &fileName) const;
