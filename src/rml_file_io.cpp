@@ -1391,7 +1391,7 @@ void RFileIO::readAscii(RFile &inFile, RValueTable &valueTable)
     valueTable.clear();
 
     valueTable.setKeyName(keyName);
-    valueTable.setKeyName(keyUnits);
+    valueTable.setKeyUnits(keyUnits);
     valueTable.setValueName(valueName);
     valueTable.setValueUnits(valueUnits);
 

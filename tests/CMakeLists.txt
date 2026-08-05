@@ -15,6 +15,7 @@ set(range_model_lib_tests
     tst_tetrahedron
     tst_sparse_vector
     tst_sparse_matrix
+    tst_material
 )
 
 foreach(test_name IN LISTS range_model_lib_tests)

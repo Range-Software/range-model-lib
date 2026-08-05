@@ -242,15 +242,23 @@ RMaterialProperty RMaterialProperty::fromJson(const QJsonObject &json)
 {
     RMaterialProperty property;
 
-    if (const QJsonValue v = json["keyType"]; v.isString())
+    if (const QJsonValue v = json["keyType"]; v.isDouble())
     {
-        property.keyType = RVariableType(v.toString().toInt());
+        property.keyType = RVariableType(v.toInt());
     }
 
-    if (const QJsonValue v = json["type"]; v.isString())
+    if (const QJsonValue v = json["type"]; v.isDouble())
     {
-        property.type = RMaterialProperty::Type(v.toString().toInt());
+        // Type is assigned directly (not through setType) to keep the value
+        // table which is read below intact.
+        property.type = RMaterialProperty::Type(v.toInt());
+        property.RValueTable::setValueName(RMaterialProperty::getName(property.type));
+        property.RValueTable::setValueUnits(RMaterialProperty::getUnits(property.type));
     }
+
+    // Drop the initial value the constructor has seeded the table with so that
+    // only values stored in the Json object are present.
+    property.clear();
 
     if (const QJsonValue v = json["table"]; v.isArray())
     {

@@ -495,7 +495,7 @@ bool RMaterial::validForProblemType(RProblemTypeMask problemTypeMask) const
 
 QString RMaterial::getDefaultFileExtension()
 {
-    return RMaterial::File::Binary::extension;
+    return RMaterial::File::Json::extension;
 }
 
 void RMaterial::readJson(const QString &fileName)
@@ -517,7 +517,9 @@ void RMaterial::readJson(const QString &fileName)
     QByteArray byteArray = file.readAll();
     RLogger::info("Successfuly read \"%ld\" bytes from \"%s\".\n",byteArray.size(),file.fileName().toUtf8().constData());
 
-    this->fromJson(QJsonDocument::fromJson(byteArray).object());
+    (*this) = RMaterial::fromJson(QJsonDocument::fromJson(byteArray).object());
+
+    RLogger::unindent();
 
     file.close();
 }
@@ -601,6 +603,8 @@ void RMaterial::writeJson(const QString &fileName) const
     qint64 bytesOut = file.write(QJsonDocument(this->toJson()).toJson());
 
     RLogger::info("Successfuly wrote \"%ld\" bytes to \"%s\".\n",bytesOut,file.fileName().toUtf8().constData());
+
+    RLogger::unindent();
 
     file.commit();
 }
