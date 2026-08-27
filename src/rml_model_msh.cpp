@@ -5,7 +5,7 @@
 #include "rml_model_msh.h"
 #include "rml_file_io.h"
 #include "rml_file.h"
-#include "rml_file_manager.h"
+#include "rml_file_utils.h"
 
 
 #define FSREAD(_inFile,_data,_size,_descStr)                   \
@@ -114,7 +114,7 @@ void RModelMsh::read (const QString &fileName)
         throw RError(RError::Type::InvalidFileName,R_ERROR_REF,"No file name was provided.");
     }
 
-    QString ext = RFileManager::getExtension(fileName).toLower();
+    QString ext = RFileUtils::getExtension(fileName).toLower();
 
     if (ext == "tmsh")
     {
@@ -138,7 +138,7 @@ void RModelMsh::write (const QString &fileName) const
         throw RError(RError::Type::InvalidFileName,R_ERROR_REF,"No file name was provided.");
     }
 
-    QString ext = RFileManager::getExtension(fileName).toLower();
+    QString ext = RFileUtils::getExtension(fileName).toLower();
 
     if (ext == "tmsh")
     {

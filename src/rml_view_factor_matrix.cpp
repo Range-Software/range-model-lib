@@ -1,5 +1,5 @@
 #include "rml_view_factor_matrix.h"
-#include "rml_file_manager.h"
+#include "rml_file_utils.h"
 #include "rml_file_io.h"
 
 
@@ -99,7 +99,7 @@ void RViewFactorMatrix::read(const QString &fileName)
 
     while (!targetFileName.isEmpty())
     {
-        QString ext = RFileManager::getExtension(targetFileName);
+        QString ext = RFileUtils::getExtension(targetFileName);
 
         try
         {
@@ -142,7 +142,7 @@ void RViewFactorMatrix::write(const QString &fileName, const QString &linkFileNa
         throw RError(RError::Type::InvalidFileName,R_ERROR_REF,"No file name was provided.");
     }
 
-    QString ext = RFileManager::getExtension(fileName);
+    QString ext = RFileUtils::getExtension(fileName);
 
     try
     {
@@ -194,7 +194,7 @@ void RViewFactorMatrix::readHeader(const QString &fileName, RViewFactorMatrixHea
 
     while (!targetFileName.isEmpty())
     {
-        QString ext = RFileManager::getExtension(targetFileName);
+        QString ext = RFileUtils::getExtension(targetFileName);
 
         try
         {
@@ -243,7 +243,7 @@ void RViewFactorMatrix::writeLink(const QString &linkFileName, const QString &ta
     }
 
     bool binary = true;
-    QString ext = RFileManager::getExtension(linkFileName);
+    QString ext = RFileUtils::getExtension(linkFileName);
 
     if (ext == RViewFactorMatrix::getDefaultFileExtension(false))
     {
@@ -258,7 +258,7 @@ void RViewFactorMatrix::writeLink(const QString &linkFileName, const QString &ta
         throw RError(RError::Type::InvalidFileName,R_ERROR_REF, "Unknown extension \"" + ext + "\".");
     }
 
-    RFileManager::writeLink(linkFileName,targetFileName,RViewFactorMatrix::version,binary);
+    RFileUtils::writeLink(linkFileName,targetFileName,RViewFactorMatrix::version,binary);
 }
 
 QString RViewFactorMatrix::readAscii(const QString &fileName)
@@ -282,7 +282,7 @@ QString RViewFactorMatrix::readAscii(const QString &fileName)
     RFileIO::readAscii(file,fileHeader);
     if (fileHeader.getType() == R_FILE_TYPE_LINK)
     {
-        QString targetFileName(RFileManager::findLinkTargetFileName(fileName,fileHeader.getInformation()));
+        QString targetFileName(RFileUtils::findLinkTargetFileName(fileName,fileHeader.getInformation()));
         RLogger::info("File \'%s\' is a link file pointing to \'%s\'\n",fileName.toUtf8().constData(),targetFileName.toUtf8().constData());
         return targetFileName;
     }
@@ -331,7 +331,7 @@ QString RViewFactorMatrix::readBinary(const QString &fileName)
     RFileIO::readBinary(file,fileHeader);
     if (fileHeader.getType() == R_FILE_TYPE_LINK)
     {
-        QString targetFileName(RFileManager::findLinkTargetFileName(fileName,fileHeader.getInformation()));
+        QString targetFileName(RFileUtils::findLinkTargetFileName(fileName,fileHeader.getInformation()));
         RLogger::info("File \'%s\' is a link file pointing to \'%s\'\n",fileName.toUtf8().constData(),targetFileName.toUtf8().constData());
         return targetFileName;
     }
@@ -437,7 +437,7 @@ QString RViewFactorMatrix::readAsciiHeader(const QString &fileName, RViewFactorM
     RFileIO::readAscii(file,fileHeader);
     if (fileHeader.getType() == R_FILE_TYPE_LINK)
     {
-        QString targetFileName(RFileManager::findLinkTargetFileName(fileName,fileHeader.getInformation()));
+        QString targetFileName(RFileUtils::findLinkTargetFileName(fileName,fileHeader.getInformation()));
         RLogger::info("File \'%s\' is a link file pointing to \'%s\'\n",fileName.toUtf8().constData(),targetFileName.toUtf8().constData());
         return targetFileName;
     }
@@ -477,7 +477,7 @@ QString RViewFactorMatrix::readBinaryHeader(const QString &fileName, RViewFactor
     RFileIO::readBinary(file,fileHeader);
     if (fileHeader.getType() == R_FILE_TYPE_LINK)
     {
-        QString targetFileName(RFileManager::findLinkTargetFileName(fileName,fileHeader.getInformation()));
+        QString targetFileName(RFileUtils::findLinkTargetFileName(fileName,fileHeader.getInformation()));
         RLogger::info("File \'%s\' is a link file pointing to \'%s\'\n",fileName.toUtf8().constData(),targetFileName.toUtf8().constData());
         return targetFileName;
     }

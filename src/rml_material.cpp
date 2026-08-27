@@ -7,7 +7,7 @@
 
 #include "rml_material.h"
 #include "rml_file_io.h"
-#include "rml_file_manager.h"
+#include "rml_file_utils.h"
 
 const RVersion RMaterial::version = RVersion(FILE_MAJOR_VERSION,FILE_MINOR_VERSION,FILE_RELEASE_VERSION);
 
@@ -257,7 +257,7 @@ void RMaterial::read(const QString &fileName)
         throw RError(RError::Type::InvalidFileName,R_ERROR_REF,"No file name was provided.");
     }
 
-    QString ext = RFileManager::getExtension(fileName).toLower();
+    QString ext = RFileUtils::getExtension(fileName).toLower();
 
     try
     {
@@ -299,7 +299,7 @@ void RMaterial::write(const QString &fileName) const
         throw RError(RError::Type::InvalidFileName,R_ERROR_REF,"No file was name provided.");
     }
 
-    QString ext = RFileManager::getExtension(fileName).toLower();
+    QString ext = RFileUtils::getExtension(fileName).toLower();
 
     try
     {

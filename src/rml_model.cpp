@@ -16,7 +16,7 @@
 
 #include "rml_model.h"
 #include "rml_file_io.h"
-#include "rml_file_manager.h"
+#include "rml_file_utils.h"
 #include "rml_view_factor_matrix.h"
 #include "rml_polygon.h"
 
@@ -408,7 +408,7 @@ void RModel::read(const QString &fileName)
 
     while (!targetFileName.isEmpty())
     {
-        QString ext = RFileManager::getExtension(targetFileName);
+        QString ext = RFileUtils::getExtension(targetFileName);
 
         try
         {
@@ -466,9 +466,9 @@ QString RModel::write(const QString &fileName, bool writeLinkFile) const
         throw RError(RError::Type::InvalidFileName,R_ERROR_REF,"No file name was provided.");
     }
 
-    QString ext = RFileManager::getExtension(fileName);
+    QString ext = RFileUtils::getExtension(fileName);
     QString targetFileName(fileName);
-    QString linkFileName = RFileManager::getFileNameWithOutTimeStep(fileName);
+    QString linkFileName = RFileUtils::getFileNameWithOutTimeStep(fileName);
 
     uint recordNumber = 0;
 
@@ -484,7 +484,7 @@ QString RModel::write(const QString &fileName, bool writeLinkFile) const
         }
     }
 
-    targetFileName = RFileManager::getFileNameWithTimeStep(linkFileName,recordNumber);
+    targetFileName = RFileUtils::getFileNameWithTimeStep(linkFileName,recordNumber);
 
     try
     {
@@ -6526,8 +6526,8 @@ QString RModel::writeViewFactorMatrix(const RViewFactorMatrix &viewFactorMatrix,
     {
         currentTimeStep = this->getTimeSolver().getCurrentTimeStep()+1;
     }
-    QString newViewFactorMatrixFile = RFileManager::getFileNameWithTimeStep(fileName,currentTimeStep);
-    QString linkViewFactorMatrixFile = RFileManager::getFileNameWithOutTimeStep(newViewFactorMatrixFile);
+    QString newViewFactorMatrixFile = RFileUtils::getFileNameWithTimeStep(fileName,currentTimeStep);
+    QString linkViewFactorMatrixFile = RFileUtils::getFileNameWithOutTimeStep(newViewFactorMatrixFile);
 
     RLogger::info("Writing view-factor matrix to file \'%s\'\n",newViewFactorMatrixFile.toUtf8().constData());
     viewFactorMatrix.write(newViewFactorMatrixFile,linkViewFactorMatrixFile);
@@ -7180,7 +7180,7 @@ void RModel::writeLink(const QString &linkFileName, const QString &targetFileNam
     }
 
     bool binary = true;
-    QString ext = RFileManager::getExtension(linkFileName);
+    QString ext = RFileUtils::getExtension(linkFileName);
 
     if (ext == RModel::getDefaultFileExtension(false))
     {
@@ -7195,7 +7195,7 @@ void RModel::writeLink(const QString &linkFileName, const QString &targetFileNam
         throw RError(RError::Type::InvalidFileName,R_ERROR_REF, "Unknown extension \"" + ext + "\".");
     }
 
-    RFileManager::writeLink(linkFileName,targetFileName,version,binary);
+    RFileUtils::writeLink(linkFileName,targetFileName,version,binary);
 } /* RModel::writeLink */
 
 
@@ -7222,7 +7222,7 @@ QString RModel::readAscii(const QString &fileName)
     RLogger::debug("File header: %s\n",fileHeader.toString().toUtf8().constData());
     if (fileHeader.getType() == R_FILE_TYPE_LINK)
     {
-        QString targetFileName(RFileManager::findLinkTargetFileName(fileName,fileHeader.getInformation()));
+        QString targetFileName(RFileUtils::findLinkTargetFileName(fileName,fileHeader.getInformation()));
         RLogger::info("File \'%s\' is a link file pointing to \'%s\'\n",fileName.toUtf8().constData(),targetFileName.toUtf8().constData());
         return targetFileName;
     }
@@ -7414,7 +7414,7 @@ QString RModel::readBinary(const QString &fileName)
     RLogger::debug("File header: %s\n",fileHeader.toString().toUtf8().constData());
     if (fileHeader.getType() == R_FILE_TYPE_LINK)
     {
-        QString targetFileName(RFileManager::findLinkTargetFileName(fileName,fileHeader.getInformation()));
+        QString targetFileName(RFileUtils::findLinkTargetFileName(fileName,fileHeader.getInformation()));
         RLogger::info("File \'%s\' is a link file pointing to \'%s\'\n",fileName.toUtf8().constData(),targetFileName.toUtf8().constData());
         return targetFileName;
     }

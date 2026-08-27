@@ -1,6 +1,6 @@
 #include <QFileInfo>
 
-#include "rml_file_manager.h"
+#include "rml_file_utils.h"
 #include "rml_radiation_setup.h"
 
 
@@ -64,7 +64,7 @@ QString RRadiationSetup::findRecentViewFactorMatrixFile(const QString &viewFacto
 
     for (uint i=0;i<=timeStep;i++)
     {
-        QString fileNameWithTimeStamp = RFileManager::getFileNameWithTimeStep(viewFactorMatrixFile,timeStep-i);
+        QString fileNameWithTimeStamp = RFileUtils::getFileNameWithTimeStep(viewFactorMatrixFile,timeStep-i);
 
         if (QFileInfo::exists(fileNameWithTimeStamp))
         {

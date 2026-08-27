@@ -8,7 +8,7 @@
 #include "rml_file.h"
 #include "rml_file_header.h"
 #include "rml_file_io.h"
-#include "rml_file_manager.h"
+#include "rml_file_utils.h"
 
 const RVersion RGLDisplayProperties::version = RVersion(FILE_MAJOR_VERSION,FILE_MINOR_VERSION,FILE_RELEASE_VERSION);
 
@@ -212,7 +212,7 @@ void RGLDisplayProperties::read(const QString &fileName)
 
     while (!targetFileName.isEmpty())
     {
-        QString ext = RFileManager::getExtension(targetFileName);
+        QString ext = RFileUtils::getExtension(targetFileName);
 
         try
         {
@@ -255,7 +255,7 @@ void RGLDisplayProperties::write(const QString &fileName) const
         throw RError(RError::Type::InvalidFileName,R_ERROR_REF,"No file name was provided.");
     }
 
-    QString ext = RFileManager::getExtension(fileName);
+    QString ext = RFileUtils::getExtension(fileName);
 
     try
     {
@@ -323,7 +323,7 @@ QString RGLDisplayProperties::readAscii(const QString &fileName)
     RFileIO::readAscii(file,fileHeader);
     if (fileHeader.getType() == R_FILE_TYPE_LINK)
     {
-        QString targetFileName(RFileManager::findLinkTargetFileName(fileName,fileHeader.getInformation()));
+        QString targetFileName(RFileUtils::findLinkTargetFileName(fileName,fileHeader.getInformation()));
         RLogger::info("File \'%s\' is a link file pointing to \'%s\'\n",fileName.toUtf8().constData(),targetFileName.toUtf8().constData());
         return targetFileName;
     }
@@ -363,7 +363,7 @@ QString RGLDisplayProperties::readBinary(const QString &fileName)
     RFileIO::readBinary(file,fileHeader);
     if (fileHeader.getType() == R_FILE_TYPE_LINK)
     {
-        QString targetFileName(RFileManager::findLinkTargetFileName(fileName,fileHeader.getInformation()));
+        QString targetFileName(RFileUtils::findLinkTargetFileName(fileName,fileHeader.getInformation()));
         RLogger::info("File \'%s\' is a link file pointing to \'%s\'\n",fileName.toUtf8().constData(),targetFileName.toUtf8().constData());
         return targetFileName;
     }

@@ -153,6 +153,9 @@ class RMaterial
         //! Return default file extension.
         static QString getDefaultFileExtension();
 
+        //! Return json file specs.
+        static QByteArray getJsonFileSpecs();
+
     protected:
 
         //! Read from the Json file.

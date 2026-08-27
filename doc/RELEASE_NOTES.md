@@ -3,6 +3,7 @@
 ### Improvements
 
 - **RMaterial** added support for JSON file format
+- Class **RFileManager** changed to namespace **RFileUtils**
 
 ---
 

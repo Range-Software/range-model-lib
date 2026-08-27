@@ -16,7 +16,7 @@ qt_add_library(range-model-lib
         src/rml_file.cpp
         src/rml_file_header.cpp
         src/rml_file_io.cpp
-        src/rml_file_manager.cpp
+        src/rml_file_utils.cpp
         src/rml_gl_display_properties.cpp
         src/rml_gl_light.cpp
         src/rml_initial_condition.cpp
@@ -85,7 +85,7 @@ qt_add_library(range-model-lib
         include/rml_file.h
         include/rml_file_header.h
         include/rml_file_io.h
-        include/rml_file_manager.h
+        include/rml_file_utils.h
         include/rml_gl_display_properties.h
         include/rml_gl_light.h
         include/rml_initial_condition.h
