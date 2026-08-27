@@ -8,7 +8,7 @@
 
 #define R_VARIABLE_TYPE_IS_VALID(_type) \
 ( \
-    _type >= R_VARIABLE_NONE && _type < R_VARIABLE_N_TYPES \
+    _type >= R_VARIABLE_NONE &&_type < R_VARIABLE_N_TYPES \
 )
 
 #define R_VARIABLE_APPLY_TYPE_IS_VALID(_type) \
@@ -161,7 +161,7 @@ class RVariable
     private:
 
         //! Internal initialization function
-        void _init ( const RVariable *variable = nullptr );
+        void _init(const RVariable *variable = nullptr);
 
     protected:
 
@@ -181,148 +181,148 @@ class RVariable
     public:
 
         //! Constructor.
-        RVariable (RVariableType type = R_VARIABLE_NONE, RVariableApplyType applyType = R_VARIABLE_APPLY_NONE);
+        RVariable(RVariableType type = R_VARIABLE_NONE, RVariableApplyType applyType = R_VARIABLE_APPLY_NONE);
 
         //! Copy constructor.
-        RVariable (const RVariable &variable);
+        RVariable(const RVariable &variable);
 
         //! Destructor.
-        ~RVariable ();
+        ~RVariable();
 
         //! Return variable type.
-        RVariableType getType ( void ) const;
+        RVariableType getType() const;
 
         //! Set variable type.
-        void setType ( RVariableType type );
+        void setType(RVariableType type);
 
         //! Return variable apply type.
-        RVariableApplyType getApplyType ( void ) const;
+        RVariableApplyType getApplyType() const;
 
         //! Set variable apply type.
-        void setApplyType ( RVariableApplyType type );
+        void setApplyType(RVariableApplyType type);
 
         //! Return variable name.
-        const QString & getName ( void ) const;
+        const QString &getName() const;
 
         //! Set variable name.
-        void setName ( const QString &name );
+        void setName(const QString &name);
 
         //! Return variable units.
-        const QString & getUnits ( void ) const;
+        const QString &getUnits() const;
 
         //! Set variable units.
-        void setUnits ( const QString &units );
+        void setUnits(const QString &units);
 
         //! Return number of value vectors.
-        unsigned int getNVectors ( void ) const;
+        uint getNVectors() const;
 
         //! Return number of values in one vector.
-        unsigned int getNValues ( void ) const;
+        uint getNValues() const;
 
         //! Clear values.
-        void clearValues(void);
+        void clearValues();
 
         //! Resize value vectors.
-        void resize ( unsigned int nvectors,
-                      unsigned int nvalues,
-                      bool fillInitValues = false  );
+        void resize(uint nvectors,
+                    uint nvalues,
+                    bool fillInitValues = false);
 
         //! Return value at given position.
         //! If variable is vector type magnitude will be returned.
-        double getValue ( unsigned int valpos ) const;
+        double getValue(uint valpos) const;
 
         //! Return value at given position.
-        double getValue ( unsigned int vecpos,
-                          unsigned int valpos ) const;
+        double getValue(uint vecpos,
+                        uint valpos) const;
 
         //! Return value vector at given position.
         //! If variable is scalar vector will have only one component.
-        RRVector getValueVector ( unsigned int valpos ) const;
+        RRVector getValueVector(uint valpos) const;
 
         //! Return values.
         //! If variable is vector type magnitude values will be returned.
-        RRVector getValues ( void ) const;
+        RRVector getValues() const;
 
         //! Return values for given vector position.
-        RRVector getValues ( unsigned int vecpos ) const;
+        RRVector getValues(uint vecpos) const;
 
         //! Return minimum value.
         //! If variable is vector type min. magnitude will be returned.
-        double getMinValue ( void ) const;
+        double getMinValue() const;
 
         //! Return minimum value for a given vector.
-        double getMinValue ( unsigned int vecpos ) const;
+        double getMinValue(uint vecpos) const;
 
         //! Return maximum value.
         //! If variable is vector type max. magnitude will be returned.
-        double getMaxValue ( void ) const;
+        double getMaxValue() const;
 
         //! Return maximum value for a given vector.
-        double getMaxValue ( unsigned int vecpos ) const;
+        double getMaxValue(uint vecpos) const;
 
         //! Set value at given position.
-        void setValue ( unsigned int vecpos,
-                        unsigned int valpos,
-                        double       value  );
+        void setValue(uint vecpos,
+                      uint valpos,
+                      double       value);
 
         //! Add new value to all vectors.
-        void addValue ( double value = 0 );
+        void addValue(double value = 0);
 
         //! Remove value at given position from all vectors.
-        void removeValue ( unsigned int valpos );
+        void removeValue(uint valpos);
 
         //! Remove values at given positions from all vectors.
         //! If valueBook[i] == RConstants::eod then value will be removed.
         void removeValues(const std::vector<uint> &valueBook);
 
         //! Return const reference to variable data.
-        const RVariableData & getVariableData ( void ) const;
+        const RVariableData &getVariableData() const;
 
         //! Return reference to variable data.
-        RVariableData & getVariableData ( void );
+        RVariableData &getVariableData();
 
         //! Set variable data.
-        void setVariableData ( RVariableData &variableData );
+        void setVariableData(RVariableData &variableData);
 
         //! Assignment operator.
-        RVariable & operator = ( const RVariable &variable );
+        RVariable &operator=(const RVariable &variable);
 
         //! Return value at given position.
-        const RValueVector & operator [] ( unsigned int vecpos ) const;
+        const RValueVector &operator[](uint vecpos) const;
 
         //! Set value at given position.
-        RValueVector & operator [] ( unsigned int vecpos );
+        RValueVector &operator[](uint vecpos);
 
         //! Return variable type for given variable ID.
-        static RVariableType getTypeFromId( const QString &variableId );
+        static RVariableType getTypeFromId( const QString &variableId);
 
         //! Return variable ID for specified variable type.
-        static QString getId ( RVariableType type );
+        static QString getId(RVariableType type);
 
         //! Return variable type name.
-        static const QString & getName ( RVariableType type );
+        static const QString &getName(RVariableType type);
 
         //! Return variable type units.
-        static const QString & getUnits ( RVariableType type );
+        static const QString &getUnits(RVariableType type);
 
         //! Return variable type initial value.
-        static double getInitValue ( RVariableType type );
+        static double getInitValue(RVariableType type);
 
         //! Return variable type data type.
-        static RVariableDataType getDataType ( RVariableType type );
+        static RVariableDataType getDataType(RVariableType type);
 
         //! Return problem type mask which has given variable type as a results.
-        static RProblemTypeMask getResultsProblemTypeMask ( RVariableType type );
+        static RProblemTypeMask getResultsProblemTypeMask(RVariableType type);
 
         //! Return variable vector name.
-        static const QString guessVectorName ( RVariableType type1,
-                                               RVariableType type2,
-                                               RVariableType type3 = R_VARIABLE_NONE );
+        static const QString guessVectorName(RVariableType type1,
+                                             RVariableType type2,
+                                             RVariableType type3 = R_VARIABLE_NONE);
 
         //! Return variable vector units.
-        static const QString guessVectorUnits ( RVariableType type1,
-                                                RVariableType type2,
-                                                RVariableType type3 = R_VARIABLE_NONE );
+        static const QString guessVectorUnits(RVariableType type1,
+                                              RVariableType type2,
+                                              RVariableType type3 = R_VARIABLE_NONE);
 
         //! Allow RFileIO to access private members.
         friend class RFileIO;
@@ -330,12 +330,12 @@ class RVariable
     protected:
 
         //! Compare two variable vectors A and B whether their types match.
-        static bool checkVectorTypes ( RVariableType typeA1,
-                                       RVariableType typeA2,
-                                       RVariableType typeA3,
-                                       RVariableType typeB1,
-                                       RVariableType typeB2,
-                                       RVariableType typeB3 );
+        static bool checkVectorTypes(RVariableType typeA1,
+                                     RVariableType typeA2,
+                                     RVariableType typeA3,
+                                     RVariableType typeB1,
+                                     RVariableType typeB2,
+                                     RVariableType typeB3);
 
 };
 

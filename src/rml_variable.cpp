@@ -162,7 +162,7 @@ void RVariable::_init (const RVariable *pVariable)
 } /* RVariable::_init */
 
 
-RVariableType RVariable::getType (void) const
+RVariableType RVariable::getType() const
 {
     return this->type;
 } /* RVariable::get_type */
@@ -170,14 +170,14 @@ RVariableType RVariable::getType (void) const
 
 void RVariable::setType (RVariableType type)
 {
-    R_ERROR_ASSERT (R_VARIABLE_TYPE_IS_VALID (type));
+    R_ERROR_ASSERT(R_VARIABLE_TYPE_IS_VALID(type));
     this->type = type;
     this->setName(RVariable::getName(type));
     this->setUnits(RVariable::getUnits(type));
 } /* RVariable::set_type */
 
 
-RVariableApplyType RVariable::getApplyType (void) const
+RVariableApplyType RVariable::getApplyType() const
 {
     return this->applyType;
 } /* RVariable::get_apply_type */
@@ -185,12 +185,12 @@ RVariableApplyType RVariable::getApplyType (void) const
 
 void RVariable::setApplyType (RVariableApplyType type)
 {
-    R_ERROR_ASSERT (R_VARIABLE_APPLY_TYPE_IS_VALID (type));
+    R_ERROR_ASSERT(R_VARIABLE_APPLY_TYPE_IS_VALID (type));
     this->applyType = type;
 } /* RVariable::set_apply_type */
 
 
-const QString &RVariable::getName(void) const
+const QString &RVariable::getName() const
 {
     return this->name;
 } /* RVariable::get_name */
@@ -202,7 +202,7 @@ void RVariable::setName (const QString &name)
 } /* RVariable::set_name */
 
 
-const QString &RVariable::getUnits(void) const
+const QString &RVariable::getUnits() const
 {
     return this->units;
 } /* RVariable::get_units */
@@ -214,13 +214,13 @@ void RVariable::setUnits (const QString &units)
 } /* RVariable::set_units */
 
 
-unsigned int RVariable::getNVectors (void) const
+uint RVariable::getNVectors() const
 {
-    return (unsigned int)this->values.size();
+    return (uint)this->values.size();
 } /* RVariable::getNVectors */
 
 
-unsigned int RVariable::getNValues (void) const
+uint RVariable::getNValues() const
 {
     if (this->getNVectors() > 0)
     {
@@ -233,21 +233,21 @@ unsigned int RVariable::getNValues (void) const
 } /* RVariable::getNValues */
 
 
-void RVariable::clearValues(void)
+void RVariable::clearValues()
 {
-    for (unsigned int i=0;i<this->values.size();i++)
+    for (uint i=0;i<this->values.size();i++)
     {
         this->values[i].fill(0.0);
     }
 } /* RVariable::clearValues */
 
 
-void RVariable::resize (unsigned int nvectors,
-                        unsigned int nvalues,
-                        bool fillInitValues)
+void RVariable::resize(uint nvectors,
+                       uint nvalues,
+                       bool fillInitValues)
 {
-    this->values.resize (nvectors);
-    for (unsigned int i=0;i<nvectors;i++)
+    this->values.resize(nvectors);
+    for (uint i=0;i<nvectors;i++)
     {
         this->values[i].resize(nvalues);
         if (fillInitValues)
@@ -258,10 +258,10 @@ void RVariable::resize (unsigned int nvectors,
 } /* RVariable::resize */
 
 
-double RVariable::getValue(unsigned int valpos) const
+double RVariable::getValue(uint valpos) const
 {
-    R_ERROR_ASSERT (this->getNVectors() > 0);
-    R_ERROR_ASSERT (valpos < this->getNValues());
+    R_ERROR_ASSERT(this->getNVectors() > 0);
+    R_ERROR_ASSERT(valpos < this->getNValues());
 
     if (this->getNVectors() == 1)
     {
@@ -270,7 +270,7 @@ double RVariable::getValue(unsigned int valpos) const
     else
     {
         double tmpValue = 0.0;
-        for (unsigned int i=0;i<this->getNVectors();i++)
+        for (uint i=0;i<this->getNVectors();i++)
         {
             tmpValue += this->getValue(i,valpos)*this->getValue(i,valpos);
         }
@@ -279,22 +279,22 @@ double RVariable::getValue(unsigned int valpos) const
 } /* RVariable::getValue */
 
 
-double RVariable::getValue (unsigned int vecpos,
-                            unsigned int valpos) const
+double RVariable::getValue(uint vecpos,
+                           uint valpos) const
 {
-    R_ERROR_ASSERT (vecpos < this->getNVectors ());
-    R_ERROR_ASSERT (valpos < this->getNValues ());
+    R_ERROR_ASSERT(vecpos < this->getNVectors());
+    R_ERROR_ASSERT(valpos < this->getNValues());
     return this->values[vecpos][valpos];
 } /* RVariable::getValue */
 
 
-RRVector RVariable::getValueVector(unsigned int valpos) const
+RRVector RVariable::getValueVector(uint valpos) const
 {
-    R_ERROR_ASSERT (valpos < this->getNValues ());
+    R_ERROR_ASSERT(valpos < this->getNValues ());
 
     RRVector valueVector(this->getNVectors());
 
-    for (unsigned int i=0;i<this->getNVectors();i++)
+    for (uint i=0;i<this->getNVectors();i++)
     {
         valueVector[i] = this->getValue(i,valpos);
     }
@@ -303,11 +303,11 @@ RRVector RVariable::getValueVector(unsigned int valpos) const
 } /* RVariable::getValueVector */
 
 
-RRVector RVariable::getValues(void) const
+RRVector RVariable::getValues() const
 {
     RRVector values(this->getNValues());
 
-    for (unsigned int i=0;i<this->getNValues();i++)
+    for (uint i=0;i<this->getNValues();i++)
     {
         values[i] = this->getValue(i);
     }
@@ -316,13 +316,13 @@ RRVector RVariable::getValues(void) const
 } /* RVariable::getValues */
 
 
-RRVector RVariable::getValues(unsigned int vecpos) const
+RRVector RVariable::getValues(uint vecpos) const
 {
-    R_ERROR_ASSERT (vecpos < this->getNVectors());
+    R_ERROR_ASSERT(vecpos < this->getNVectors());
 
     RRVector values(this->getNValues());
 
-    for (unsigned int i=0;i<this->getNValues();i++)
+    for (uint i=0;i<this->getNValues();i++)
     {
         values[i] = this->getValue(vecpos,i);
     }
@@ -331,12 +331,12 @@ RRVector RVariable::getValues(unsigned int vecpos) const
 }  /* RVariable::getValues */
 
 
-double RVariable::getMinValue(void) const
+double RVariable::getMinValue() const
 {
     double minValue = 0.0;
     bool firstValue = true;
 
-    for (unsigned int i=0;i<this->getNValues();i++)
+    for (uint i=0;i<this->getNValues();i++)
     {
         if (firstValue)
         {
@@ -353,12 +353,12 @@ double RVariable::getMinValue(void) const
 } /* RVariable::getMinValue */
 
 
-double RVariable::getMinValue(unsigned int vecpos) const
+double RVariable::getMinValue(uint vecpos) const
 {
     double minValue = 0.0;
     bool firstValue = true;
 
-    for (unsigned int i=0;i<this->getNValues();i++)
+    for (uint i=0;i<this->getNValues();i++)
     {
         if (firstValue)
         {
@@ -375,12 +375,12 @@ double RVariable::getMinValue(unsigned int vecpos) const
 } /* RVariable::getMinValue */
 
 
-double RVariable::getMaxValue(void) const
+double RVariable::getMaxValue() const
 {
     double maxValue = 0.0;
     bool firstValue = true;
 
-    for (unsigned int i=0;i<this->getNValues();i++)
+    for (uint i=0;i<this->getNValues();i++)
     {
         if (firstValue)
         {
@@ -397,12 +397,12 @@ double RVariable::getMaxValue(void) const
 } /* RVariable::getMaxValue */
 
 
-double RVariable::getMaxValue(unsigned int vecpos) const
+double RVariable::getMaxValue(uint vecpos) const
 {
     double maxValue = 0.0;
     bool firstValue = true;
 
-    for (unsigned int i=0;i<this->getNValues();i++)
+    for (uint i=0;i<this->getNValues();i++)
     {
         if (firstValue)
         {
@@ -419,17 +419,17 @@ double RVariable::getMaxValue(unsigned int vecpos) const
 } /* RVariable::getMaxValue */
 
 
-void RVariable::setValue (unsigned int vecpos,
-                          unsigned int valpos,
-                          double       value)
+void RVariable::setValue(uint vecpos,
+                         uint valpos,
+                         double       value)
 {
-    R_ERROR_ASSERT (vecpos < this->getNVectors ());
-    R_ERROR_ASSERT (valpos < this->getNValues ());
+    R_ERROR_ASSERT(vecpos < this->getNVectors ());
+    R_ERROR_ASSERT(valpos < this->getNValues ());
     this->values[vecpos][valpos] = value;
 } /* RVariable::setValue */
 
 
-void RVariable::addValue (double value)
+void RVariable::addValue(double value)
 {
     std::vector<RValueVector>::iterator iter;
 
@@ -442,7 +442,7 @@ void RVariable::addValue (double value)
 } /* RVariable::addValue */
 
 
-void RVariable::removeValue (unsigned int valpos)
+void RVariable::removeValue(uint valpos)
 {
     std::vector<RValueVector>::iterator iter;
 
@@ -468,13 +468,13 @@ void RVariable::removeValues(const std::vector<uint> &valueBook)
 } /* RVariable::removeValues */
 
 
-const RVariableData &RVariable::getVariableData(void) const
+const RVariableData &RVariable::getVariableData() const
 {
     return this->variableData;
 } /* RVariable::getVariableData */
 
 
-RVariableData &RVariable::getVariableData(void)
+RVariableData &RVariable::getVariableData()
 {
     return this->variableData;
 } /* RVariable::getVariableData */
@@ -486,23 +486,23 @@ void RVariable::setVariableData(RVariableData &variableData)
 } /* RVariable::setVariableData */
 
 
-RVariable & RVariable::operator = (const RVariable &variable)
+RVariable & RVariable::operator=(const RVariable &variable)
 {
     this->_init (&variable);
     return (*this);
 } /* RVariable::operator = */
 
 
-const RValueVector & RVariable::operator [] (unsigned int vecpos) const
+const RValueVector & RVariable::operator[](uint vecpos) const
 {
-    R_ERROR_ASSERT (vecpos < this->getNVectors ());
+    R_ERROR_ASSERT(vecpos < this->getNVectors());
     return this->values[vecpos];
 } /* RVariable::operator [] */
 
 
-RValueVector & RVariable::operator [] (unsigned int vecpos)
+RValueVector & RVariable::operator[](uint vecpos)
 {
-    R_ERROR_ASSERT (vecpos < this->getNVectors ());
+    R_ERROR_ASSERT(vecpos < this->getNVectors());
     return this->values[vecpos];
 } /* RVariable::operator [] */
 
@@ -523,144 +523,144 @@ RVariableType RVariable::getTypeFromId(const QString &variableId)
 
 QString RVariable::getId(RVariableType type)
 {
-    R_ERROR_ASSERT (R_VARIABLE_TYPE_IS_VALID (type));
+    R_ERROR_ASSERT(R_VARIABLE_TYPE_IS_VALID(type));
     return variableDesc[type].id;
 } /* RVariable::getId */
 
 
 const QString &RVariable::getName(RVariableType type)
 {
-    R_ERROR_ASSERT (R_VARIABLE_TYPE_IS_VALID (type));
+    R_ERROR_ASSERT(R_VARIABLE_TYPE_IS_VALID(type));
     return variableDesc[type].name;
 } /* RVariable::getName */
 
 
 const QString &RVariable::getUnits(RVariableType type)
 {
-    R_ERROR_ASSERT (R_VARIABLE_TYPE_IS_VALID (type));
+    R_ERROR_ASSERT(R_VARIABLE_TYPE_IS_VALID(type));
     return variableDesc[type].units;
 } /* RVariable::getUnits */
 
 
-double RVariable::getInitValue (RVariableType type)
+double RVariable::getInitValue(RVariableType type)
 {
-    R_ERROR_ASSERT (R_VARIABLE_TYPE_IS_VALID (type));
+    R_ERROR_ASSERT(R_VARIABLE_TYPE_IS_VALID(type));
     return variableDesc[type].value;
 } /* RVariable::getInitValue */
 
 
 RVariableDataType RVariable::getDataType(RVariableType type)
 {
-    R_ERROR_ASSERT (R_VARIABLE_TYPE_IS_VALID (type));
+    R_ERROR_ASSERT(R_VARIABLE_TYPE_IS_VALID(type));
     return variableDesc[type].dataType;
 } /* RVariable::getDataType */
 
 
 RProblemTypeMask RVariable::getResultsProblemTypeMask(RVariableType type)
 {
-    R_ERROR_ASSERT (R_VARIABLE_TYPE_IS_VALID (type));
+    R_ERROR_ASSERT(R_VARIABLE_TYPE_IS_VALID(type));
     return variableDesc[type].problemTypeMask;
 } /* RVariable::getResultsProblemTypeMask */
 
 
 const QString RVariable::guessVectorName(RVariableType type1,
-                                              RVariableType type2,
-                                              RVariableType type3)
+                                         RVariableType type2,
+                                         RVariableType type3)
 {
-    R_ERROR_ASSERT (R_VARIABLE_TYPE_IS_VALID (type1));
-    R_ERROR_ASSERT (R_VARIABLE_TYPE_IS_VALID (type2));
-    R_ERROR_ASSERT (R_VARIABLE_TYPE_IS_VALID (type3));
+    R_ERROR_ASSERT(R_VARIABLE_TYPE_IS_VALID(type1));
+    R_ERROR_ASSERT(R_VARIABLE_TYPE_IS_VALID(type2));
+    R_ERROR_ASSERT(R_VARIABLE_TYPE_IS_VALID(type3));
 
-   if (RVariable::checkVectorTypes (type1,type2,type3,
-                                    R_VARIABLE_ACCELERATION_X,
-                                    R_VARIABLE_ACCELERATION_Y,
-                                    R_VARIABLE_ACCELERATION_Z))
+   if (RVariable::checkVectorTypes(type1,type2,type3,
+                                   R_VARIABLE_ACCELERATION_X,
+                                   R_VARIABLE_ACCELERATION_Y,
+                                   R_VARIABLE_ACCELERATION_Z))
    {
-       return RVariable::getName (R_VARIABLE_ACCELERATION);
+       return RVariable::getName(R_VARIABLE_ACCELERATION);
    }
-   else if (RVariable::checkVectorTypes (type1,type2,type3,
-                                         R_VARIABLE_CURRENT_DENSITY_X,
-                                         R_VARIABLE_CURRENT_DENSITY_Y,
-                                         R_VARIABLE_CURRENT_DENSITY_Z))
+   else if (RVariable::checkVectorTypes(type1,type2,type3,
+                                        R_VARIABLE_CURRENT_DENSITY_X,
+                                        R_VARIABLE_CURRENT_DENSITY_Y,
+                                        R_VARIABLE_CURRENT_DENSITY_Z))
    {
-       return RVariable::getName (R_VARIABLE_CURRENT_DENSITY);
+       return RVariable::getName(R_VARIABLE_CURRENT_DENSITY);
    }
-   else if (RVariable::checkVectorTypes (type1,type2,type3,
-                                         R_VARIABLE_DISPLACEMENT_X,
-                                         R_VARIABLE_DISPLACEMENT_Y,
-                                         R_VARIABLE_DISPLACEMENT_Z))
+   else if (RVariable::checkVectorTypes(type1,type2,type3,
+                                        R_VARIABLE_DISPLACEMENT_X,
+                                        R_VARIABLE_DISPLACEMENT_Y,
+                                        R_VARIABLE_DISPLACEMENT_Z))
    {
-       return RVariable::getName (R_VARIABLE_DISPLACEMENT);
+       return RVariable::getName(R_VARIABLE_DISPLACEMENT);
    }
-   else if (RVariable::checkVectorTypes (type1,type2,type3,
-                                         R_VARIABLE_ELECTRIC_FIELD_X,
-                                         R_VARIABLE_ELECTRIC_FIELD_Y,
-                                         R_VARIABLE_ELECTRIC_FIELD_Z))
+   else if (RVariable::checkVectorTypes(type1,type2,type3,
+                                        R_VARIABLE_ELECTRIC_FIELD_X,
+                                        R_VARIABLE_ELECTRIC_FIELD_Y,
+                                        R_VARIABLE_ELECTRIC_FIELD_Z))
    {
-       return RVariable::getName (R_VARIABLE_ELECTRIC_FIELD);
+       return RVariable::getName(R_VARIABLE_ELECTRIC_FIELD);
    }
-   else if (RVariable::checkVectorTypes (type1,type2,type3,
-                                         R_VARIABLE_FORCE_X,
-                                         R_VARIABLE_FORCE_Y,
-                                         R_VARIABLE_FORCE_Z))
+   else if (RVariable::checkVectorTypes(type1,type2,type3,
+                                        R_VARIABLE_FORCE_X,
+                                        R_VARIABLE_FORCE_Y,
+                                        R_VARIABLE_FORCE_Z))
    {
-       return RVariable::getName (R_VARIABLE_FORCE);
+       return RVariable::getName(R_VARIABLE_FORCE);
    }
-   else if (RVariable::checkVectorTypes (type1,type2,type3,
+   else if (RVariable::checkVectorTypes(type1,type2,type3,
                                          R_VARIABLE_FORCE_UNIT_AREA_X,
                                          R_VARIABLE_FORCE_UNIT_AREA_Y,
                                          R_VARIABLE_FORCE_UNIT_AREA_Z))
    {
-       return RVariable::getName (R_VARIABLE_FORCE_UNIT_AREA);
+       return RVariable::getName(R_VARIABLE_FORCE_UNIT_AREA);
    }
-   else if (RVariable::checkVectorTypes (type1,type2,type3,
-                                         R_VARIABLE_G_ACCELERATION_X,
-                                         R_VARIABLE_G_ACCELERATION_Y,
-                                         R_VARIABLE_G_ACCELERATION_Z))
+   else if (RVariable::checkVectorTypes(type1,type2,type3,
+                                        R_VARIABLE_G_ACCELERATION_X,
+                                        R_VARIABLE_G_ACCELERATION_Y,
+                                        R_VARIABLE_G_ACCELERATION_Z))
    {
-       return RVariable::getName (R_VARIABLE_G_ACCELERATION);
+       return RVariable::getName(R_VARIABLE_G_ACCELERATION);
    }
-   else if (RVariable::checkVectorTypes (type1,type2,type3,
-                                         R_VARIABLE_HEAT_FLUX_X,
-                                         R_VARIABLE_HEAT_FLUX_Y,
-                                         R_VARIABLE_HEAT_FLUX_Z))
+   else if (RVariable::checkVectorTypes(type1,type2,type3,
+                                        R_VARIABLE_HEAT_FLUX_X,
+                                        R_VARIABLE_HEAT_FLUX_Y,
+                                        R_VARIABLE_HEAT_FLUX_Z))
    {
-       return RVariable::getName (R_VARIABLE_HEAT_FLUX);
+       return RVariable::getName(R_VARIABLE_HEAT_FLUX);
    }
-   else if (RVariable::checkVectorTypes (type1,type2,type3,
-                                         R_VARIABLE_MAGNETIC_FIELD_X,
-                                         R_VARIABLE_MAGNETIC_FIELD_Y,
-                                         R_VARIABLE_MAGNETIC_FIELD_Z))
+   else if (RVariable::checkVectorTypes(type1,type2,type3,
+                                        R_VARIABLE_MAGNETIC_FIELD_X,
+                                        R_VARIABLE_MAGNETIC_FIELD_Y,
+                                        R_VARIABLE_MAGNETIC_FIELD_Z))
    {
-       return RVariable::getName (R_VARIABLE_MAGNETIC_FIELD);
+       return RVariable::getName(R_VARIABLE_MAGNETIC_FIELD);
    }
-   else if (RVariable::checkVectorTypes (type1,type2,type3,
-                                         R_VARIABLE_MASS_FLOW_RATE_X,
-                                         R_VARIABLE_MASS_FLOW_RATE_Y,
-                                         R_VARIABLE_MASS_FLOW_RATE_Z))
+   else if (RVariable::checkVectorTypes(type1,type2,type3,
+                                        R_VARIABLE_MASS_FLOW_RATE_X,
+                                        R_VARIABLE_MASS_FLOW_RATE_Y,
+                                        R_VARIABLE_MASS_FLOW_RATE_Z))
    {
-       return RVariable::getName (R_VARIABLE_MASS_FLOW_RATE);
+       return RVariable::getName(R_VARIABLE_MASS_FLOW_RATE);
    }
-   else if (RVariable::checkVectorTypes (type1,type2,type3,
-                                         R_VARIABLE_STRESS_X,
-                                         R_VARIABLE_STRESS_Y,
-                                         R_VARIABLE_STRESS_Z))
+   else if (RVariable::checkVectorTypes(type1,type2,type3,
+                                        R_VARIABLE_STRESS_X,
+                                        R_VARIABLE_STRESS_Y,
+                                        R_VARIABLE_STRESS_Z))
    {
-       return RVariable::getName (R_VARIABLE_STRESS_NORMAL);
+       return RVariable::getName(R_VARIABLE_STRESS_NORMAL);
    }
-   else if (RVariable::checkVectorTypes (type1,type2,type3,
-                                         R_VARIABLE_STRESS_XY,
-                                         R_VARIABLE_STRESS_XZ,
-                                         R_VARIABLE_STRESS_YZ))
+   else if (RVariable::checkVectorTypes(type1,type2,type3,
+                                        R_VARIABLE_STRESS_XY,
+                                        R_VARIABLE_STRESS_XZ,
+                                        R_VARIABLE_STRESS_YZ))
    {
-       return RVariable::getName (R_VARIABLE_STRESS_SHEAR);
+       return RVariable::getName(R_VARIABLE_STRESS_SHEAR);
    }
-   else if (RVariable::checkVectorTypes (type1,type2,type3,
-                                         R_VARIABLE_VELOCITY_X,
-                                         R_VARIABLE_VELOCITY_Y,
-                                         R_VARIABLE_VELOCITY_Z))
+   else if (RVariable::checkVectorTypes(type1,type2,type3,
+                                        R_VARIABLE_VELOCITY_X,
+                                        R_VARIABLE_VELOCITY_Y,
+                                        R_VARIABLE_VELOCITY_Z))
    {
-       return RVariable::getName (R_VARIABLE_VELOCITY);
+       return RVariable::getName(R_VARIABLE_VELOCITY);
    }
    else
    {
@@ -669,103 +669,103 @@ const QString RVariable::guessVectorName(RVariableType type1,
 } /* RVariable::guessVectorName */
 
 const QString RVariable::guessVectorUnits(RVariableType type1,
-                                              RVariableType type2,
-                                              RVariableType type3)
+                                          RVariableType type2,
+                                          RVariableType type3)
 {
-    R_ERROR_ASSERT (R_VARIABLE_TYPE_IS_VALID (type1));
-    R_ERROR_ASSERT (R_VARIABLE_TYPE_IS_VALID (type2));
-    R_ERROR_ASSERT (R_VARIABLE_TYPE_IS_VALID (type3));
+    R_ERROR_ASSERT(R_VARIABLE_TYPE_IS_VALID(type1));
+    R_ERROR_ASSERT(R_VARIABLE_TYPE_IS_VALID(type2));
+    R_ERROR_ASSERT(R_VARIABLE_TYPE_IS_VALID(type3));
 
-   if (RVariable::checkVectorTypes (type1,type2,type3,
-                                    R_VARIABLE_ACCELERATION_X,
-                                    R_VARIABLE_ACCELERATION_Y,
-                                    R_VARIABLE_ACCELERATION_Z))
+   if (RVariable::checkVectorTypes(type1,type2,type3,
+                                   R_VARIABLE_ACCELERATION_X,
+                                   R_VARIABLE_ACCELERATION_Y,
+                                   R_VARIABLE_ACCELERATION_Z))
    {
-       return RVariable::getUnits (R_VARIABLE_ACCELERATION);
+       return RVariable::getUnits(R_VARIABLE_ACCELERATION);
    }
-   else if (RVariable::checkVectorTypes (type1,type2,type3,
-                                         R_VARIABLE_CURRENT_DENSITY_X,
-                                         R_VARIABLE_CURRENT_DENSITY_Y,
-                                         R_VARIABLE_CURRENT_DENSITY_Z))
+   else if (RVariable::checkVectorTypes(type1,type2,type3,
+                                        R_VARIABLE_CURRENT_DENSITY_X,
+                                        R_VARIABLE_CURRENT_DENSITY_Y,
+                                        R_VARIABLE_CURRENT_DENSITY_Z))
    {
-       return RVariable::getUnits (R_VARIABLE_CURRENT_DENSITY);
+       return RVariable::getUnits(R_VARIABLE_CURRENT_DENSITY);
    }
-   else if (RVariable::checkVectorTypes (type1,type2,type3,
-                                         R_VARIABLE_DISPLACEMENT_X,
-                                         R_VARIABLE_DISPLACEMENT_Y,
-                                         R_VARIABLE_DISPLACEMENT_Z))
+   else if (RVariable::checkVectorTypes(type1,type2,type3,
+                                        R_VARIABLE_DISPLACEMENT_X,
+                                        R_VARIABLE_DISPLACEMENT_Y,
+                                        R_VARIABLE_DISPLACEMENT_Z))
    {
-       return RVariable::getUnits (R_VARIABLE_DISPLACEMENT);
+       return RVariable::getUnits(R_VARIABLE_DISPLACEMENT);
    }
-   else if (RVariable::checkVectorTypes (type1,type2,type3,
-                                         R_VARIABLE_ELECTRIC_FIELD_X,
-                                         R_VARIABLE_ELECTRIC_FIELD_Y,
-                                         R_VARIABLE_ELECTRIC_FIELD_Z))
+   else if (RVariable::checkVectorTypes(type1,type2,type3,
+                                        R_VARIABLE_ELECTRIC_FIELD_X,
+                                        R_VARIABLE_ELECTRIC_FIELD_Y,
+                                        R_VARIABLE_ELECTRIC_FIELD_Z))
    {
-       return RVariable::getUnits (R_VARIABLE_ELECTRIC_FIELD);
+       return RVariable::getUnits(R_VARIABLE_ELECTRIC_FIELD);
    }
-   else if (RVariable::checkVectorTypes (type1,type2,type3,
-                                         R_VARIABLE_FORCE_X,
-                                         R_VARIABLE_FORCE_Y,
-                                         R_VARIABLE_FORCE_Z))
+   else if (RVariable::checkVectorTypes(type1,type2,type3,
+                                        R_VARIABLE_FORCE_X,
+                                        R_VARIABLE_FORCE_Y,
+                                        R_VARIABLE_FORCE_Z))
    {
-       return RVariable::getUnits (R_VARIABLE_FORCE);
+       return RVariable::getUnits(R_VARIABLE_FORCE);
    }
-   else if (RVariable::checkVectorTypes (type1,type2,type3,
-                                         R_VARIABLE_FORCE_UNIT_AREA_X,
-                                         R_VARIABLE_FORCE_UNIT_AREA_Y,
-                                         R_VARIABLE_FORCE_UNIT_AREA_Z))
+   else if (RVariable::checkVectorTypes(type1,type2,type3,
+                                        R_VARIABLE_FORCE_UNIT_AREA_X,
+                                        R_VARIABLE_FORCE_UNIT_AREA_Y,
+                                        R_VARIABLE_FORCE_UNIT_AREA_Z))
    {
-       return RVariable::getUnits (R_VARIABLE_FORCE_UNIT_AREA);
+       return RVariable::getUnits(R_VARIABLE_FORCE_UNIT_AREA);
    }
-   else if (RVariable::checkVectorTypes (type1,type2,type3,
-                                         R_VARIABLE_G_ACCELERATION_X,
-                                         R_VARIABLE_G_ACCELERATION_Y,
-                                         R_VARIABLE_G_ACCELERATION_Z))
+   else if (RVariable::checkVectorTypes(type1,type2,type3,
+                                        R_VARIABLE_G_ACCELERATION_X,
+                                        R_VARIABLE_G_ACCELERATION_Y,
+                                        R_VARIABLE_G_ACCELERATION_Z))
    {
-       return RVariable::getUnits (R_VARIABLE_G_ACCELERATION);
+       return RVariable::getUnits(R_VARIABLE_G_ACCELERATION);
    }
-   else if (RVariable::checkVectorTypes (type1,type2,type3,
-                                         R_VARIABLE_HEAT_FLUX_X,
-                                         R_VARIABLE_HEAT_FLUX_Y,
-                                         R_VARIABLE_HEAT_FLUX_Z))
+   else if (RVariable::checkVectorTypes(type1,type2,type3,
+                                        R_VARIABLE_HEAT_FLUX_X,
+                                        R_VARIABLE_HEAT_FLUX_Y,
+                                        R_VARIABLE_HEAT_FLUX_Z))
    {
-       return RVariable::getUnits (R_VARIABLE_HEAT_FLUX);
+       return RVariable::getUnits(R_VARIABLE_HEAT_FLUX);
    }
-   else if (RVariable::checkVectorTypes (type1,type2,type3,
-                                         R_VARIABLE_MAGNETIC_FIELD_X,
-                                         R_VARIABLE_MAGNETIC_FIELD_Y,
-                                         R_VARIABLE_MAGNETIC_FIELD_Z))
+   else if (RVariable::checkVectorTypes(type1,type2,type3,
+                                        R_VARIABLE_MAGNETIC_FIELD_X,
+                                        R_VARIABLE_MAGNETIC_FIELD_Y,
+                                        R_VARIABLE_MAGNETIC_FIELD_Z))
    {
-       return RVariable::getUnits (R_VARIABLE_MAGNETIC_FIELD);
+       return RVariable::getUnits(R_VARIABLE_MAGNETIC_FIELD);
    }
-   else if (RVariable::checkVectorTypes (type1,type2,type3,
-                                         R_VARIABLE_MASS_FLOW_RATE_X,
-                                         R_VARIABLE_MASS_FLOW_RATE_Y,
-                                         R_VARIABLE_MASS_FLOW_RATE_Z))
+   else if (RVariable::checkVectorTypes(type1,type2,type3,
+                                        R_VARIABLE_MASS_FLOW_RATE_X,
+                                        R_VARIABLE_MASS_FLOW_RATE_Y,
+                                        R_VARIABLE_MASS_FLOW_RATE_Z))
    {
-       return RVariable::getUnits (R_VARIABLE_MASS_FLOW_RATE);
+       return RVariable::getUnits(R_VARIABLE_MASS_FLOW_RATE);
    }
-   else if (RVariable::checkVectorTypes (type1,type2,type3,
-                                         R_VARIABLE_STRESS_X,
-                                         R_VARIABLE_STRESS_Y,
-                                         R_VARIABLE_STRESS_Z))
+   else if (RVariable::checkVectorTypes(type1,type2,type3,
+                                        R_VARIABLE_STRESS_X,
+                                        R_VARIABLE_STRESS_Y,
+                                        R_VARIABLE_STRESS_Z))
    {
-       return RVariable::getUnits (R_VARIABLE_STRESS_NORMAL);
+       return RVariable::getUnits(R_VARIABLE_STRESS_NORMAL);
    }
-   else if (RVariable::checkVectorTypes (type1,type2,type3,
-                                         R_VARIABLE_STRESS_XY,
-                                         R_VARIABLE_STRESS_XZ,
-                                         R_VARIABLE_STRESS_YZ))
+   else if (RVariable::checkVectorTypes(type1,type2,type3,
+                                        R_VARIABLE_STRESS_XY,
+                                        R_VARIABLE_STRESS_XZ,
+                                        R_VARIABLE_STRESS_YZ))
    {
-       return RVariable::getUnits (R_VARIABLE_STRESS_SHEAR);
+       return RVariable::getUnits(R_VARIABLE_STRESS_SHEAR);
    }
-   else if (RVariable::checkVectorTypes (type1,type2,type3,
-                                         R_VARIABLE_VELOCITY_X,
-                                         R_VARIABLE_VELOCITY_Y,
-                                         R_VARIABLE_VELOCITY_Z))
+   else if (RVariable::checkVectorTypes(type1,type2,type3,
+                                        R_VARIABLE_VELOCITY_X,
+                                        R_VARIABLE_VELOCITY_Y,
+                                        R_VARIABLE_VELOCITY_Z))
    {
-       return RVariable::getUnits (R_VARIABLE_VELOCITY);
+       return RVariable::getUnits(R_VARIABLE_VELOCITY);
    }
    else
    {

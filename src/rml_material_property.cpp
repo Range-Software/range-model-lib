@@ -242,16 +242,18 @@ RMaterialProperty RMaterialProperty::fromJson(const QJsonObject &json)
 {
     RMaterialProperty property;
 
-    if (const QJsonValue v = json["keyType"]; v.isDouble())
+    if (const QJsonValue v = json["keyType"]; v.isString())
     {
-        property.keyType = RVariableType(v.toInt());
+        property.keyType = RVariable::getTypeFromId(v.toString());
+        property.RValueTable::setKeyName(RVariable::getName(property.keyType));
+        property.RValueTable::setKeyUnits(RVariable::getUnits(property.keyType));
     }
 
-    if (const QJsonValue v = json["type"]; v.isDouble())
+    if (const QJsonValue v = json["type"]; v.isString())
     {
         // Type is assigned directly (not through setType) to keep the value
         // table which is read below intact.
-        property.type = RMaterialProperty::Type(v.toInt());
+        property.type = RMaterialProperty::getTypeFromId(v.toString());
         property.RValueTable::setValueName(RMaterialProperty::getName(property.type));
         property.RValueTable::setValueUnits(RMaterialProperty::getUnits(property.type));
     }
@@ -284,8 +286,8 @@ QJsonObject RMaterialProperty::toJson() const
 {
     QJsonObject jObject;
 
-    jObject["keyType"] = this->keyType;
-    jObject["type"] = this->type;
+    jObject["keyType"] = RVariable::getId(this->keyType);
+    jObject["type"] = RMaterialProperty::getId(this->type);
 
     QJsonArray jArray;
     for (uint i=0;i<this->size();i++)
