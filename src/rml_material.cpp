@@ -8,6 +8,7 @@
 #include "rml_material.h"
 #include "rml_file_io.h"
 #include "rml_file_utils.h"
+#include "rml_problem.h"
 
 const RVersion RMaterial::version = RVersion(FILE_MAJOR_VERSION,FILE_MINOR_VERSION,FILE_RELEASE_VERSION);
 
@@ -496,6 +497,173 @@ bool RMaterial::validForProblemType(RProblemTypeMask problemTypeMask) const
 QString RMaterial::getDefaultFileExtension()
 {
     return RMaterial::File::Json::extension;
+}
+
+QByteArray RMaterial::getJsonFileSpecs()
+{
+    const std::vector<RProblemType> problemTypes = RProblem::getTypes(R_PROBLEM_ALL);
+
+    const struct
+    {
+        RMaterial::State state;
+        const char *description;
+    } states[] =
+    {
+        { RMaterial::None,   "unspecified / unknown" },
+        { RMaterial::Gas,    "gas"                   },
+        { RMaterial::Liquid, "liquid"                },
+        { RMaterial::Solid,  "solid"                 }
+    };
+
+    const QString keyTypeId = RVariable::getId(R_VARIABLE_TEMPERATURE);
+
+    QString spec;
+
+    spec += "RANGE FEA MATERIAL FILE (JSON) - FORMAT SPECIFICATION\n";
+    spec += "====================================================\n";
+    spec += "\n";
+    spec += "1. GENERAL\n";
+    spec += "\n";
+    spec += "   Format name    : " + RMaterial::File::Json::name + "\n";
+    spec += "   File extension : ." + RMaterial::File::Json::extension + "\n";
+    spec += "   File version   : " + RMaterial::version.toString() + "\n";
+    spec += "   Encoding       : UTF-8 text holding one JSON object (RFC 8259).\n";
+    spec += "   Content        : A single material - its identification and a list of material\n";
+    spec += "                    properties. Every property is a table of values given as a\n";
+    spec += "                    function of a key variable (temperature).\n";
+    spec += "   Units          : SI units only. Units are implied by the property type and are\n";
+    spec += "                    never stored in the file (see section 5).\n";
+    spec += "   Member order   : Irrelevant when reading. The writer emits members sorted\n";
+    spec += "                    alphabetically and indented by 4 spaces.\n";
+    spec += "\n";
+    spec += "2. TOP-LEVEL OBJECT\n";
+    spec += "\n";
+    spec += "   Member        Type    Required  Description\n";
+    spec += "   ------------  ------  --------  ---------------------------------------------------\n";
+    spec += "   \"id\"          string  no        Material UUID, lower case, without braces\n";
+    spec += "                                   (8-4-4-4-12 hexadecimal digits). When missing, a new\n";
+    spec += "                                   random UUID is generated on read.\n";
+    spec += "   \"name\"        string  yes       Human readable material name, e.g. \"Water\".\n";
+    spec += "   \"state\"       string  no        State of matter (section 3). CAUTION: it is a\n";
+    spec += "                                   decimal integer WRITTEN AS A JSON STRING, e.g. \"3\".\n";
+    spec += "                                   A plain JSON number is ignored on read.\n";
+    spec += "   \"properties\"  array   yes       List of property objects (section 4).\n";
+    spec += "\n";
+    spec += "   Unknown members are ignored. Members of a wrong JSON type are ignored and the\n";
+    spec += "   corresponding default is kept.\n";
+    spec += "\n";
+    spec += "3. MATERIAL STATE VALUES\n";
+    spec += "\n";
+    spec += "   Value  Meaning\n";
+    spec += "   -----  ---------------------\n";
+    for (size_t i=0;i<sizeof(states)/sizeof(states[0]);i++)
+    {
+        spec += "   " + QString("\"%1\"").arg(int(states[i].state)).leftJustified(7)
+              + QString::fromLatin1(states[i].description) + "\n";
+    }
+    spec += "\n";
+    spec += "   Any other value is read as-is but has no meaning to the solvers.\n";
+    spec += "\n";
+    spec += "4. PROPERTY OBJECT\n";
+    spec += "\n";
+    spec += "   Member       Type    Required  Description\n";
+    spec += "   -----------  ------  --------  ----------------------------------------------------\n";
+    spec += "   \"type\"       string  yes       Property type ID (section 5). An unknown ID is read\n";
+    spec += "                                  as \"" + RMaterialProperty::getId(RMaterialProperty::None) + "\".\n";
+    spec += "   \"keyType\"    string  yes       Variable ID of the table key. In practice always\n";
+    spec += "                                  \"" + keyTypeId + "\" (unit " + RVariable::getUnits(R_VARIABLE_TEMPERATURE) + "). An unknown ID is read as\n";
+    spec += "                                  \"" + RVariable::getId(R_VARIABLE_NONE) + "\".\n";
+    spec += "   \"table\"      array   yes       Key-value pairs, at least one entry.\n";
+    spec += "\n";
+    spec += "   Each entry of \"table\" is an object with two members:\n";
+    spec += "\n";
+    spec += "   Member       Type    Required  Description\n";
+    spec += "   -----------  ------  --------  ----------------------------------------------------\n";
+    spec += "   \"key\"        number  yes       Value of the key variable, e.g. temperature in " + RVariable::getUnits(R_VARIABLE_TEMPERATURE) + ".\n";
+    spec += "   \"value\"      number  yes       Property value at that key, in the property units.\n";
+    spec += "\n";
+    spec += "   Both members must be JSON numbers; an entry with a string or a missing member is\n";
+    spec += "   silently skipped. Entries are stored in a map keyed by \"key\", therefore:\n";
+    spec += "     - entries are sorted by ascending \"key\" when written,\n";
+    spec += "     - a repeated \"key\" overwrites the previous entry,\n";
+    spec += "     - a property with an empty table is invalid and must not be produced.\n";
+    spec += "   A value between two keys is linearly interpolated, a value outside of the table\n";
+    spec += "   range is clamped to the nearest entry. A single-entry table means a constant.\n";
+    spec += "\n";
+    spec += "   A material holds at most one property of each type - a repeated \"type\" replaces\n";
+    spec += "   the previously read property.\n";
+    spec += "\n";
+    spec += "5. PROPERTY TYPE IDS\n";
+    spec += "\n";
+    spec += "   ID                                  Name                            Units      Default\n";
+    spec += "   ----------------------------------  ------------------------------  ---------  -------\n";
+    for (uint i=uint(RMaterialProperty::None)+1;i<uint(RMaterialProperty::nTypes);i++)
+    {
+        RMaterialProperty::Type type = RMaterialProperty::Type(i);
+
+        spec += "   " + RMaterialProperty::getId(type).leftJustified(36)
+              + RMaterialProperty::getName(type).leftJustified(32)
+              + RMaterialProperty::getUnits(type).leftJustified(11)
+              + QString::number(RMaterialProperty::getInitValue(type)) + "\n";
+    }
+    spec += "\n";
+    spec += "   Units \"N/A\" mark a dimensionless quantity. The \"Default\" column holds the value\n";
+    spec += "   used when a property is created without data - it is not a physical value.\n";
+    spec += "   \"" + RMaterialProperty::getId(RMaterialProperty::Custom) + "\" carries a user defined quantity and is ignored by the solvers.\n";
+    spec += "\n";
+    spec += "6. PROPERTIES REQUIRED PER PROBLEM TYPE\n";
+    spec += "\n";
+    spec += "   A material is valid for a problem only when it holds all listed properties.\n";
+    spec += "\n";
+    qsizetype problemNameWidth = 0;
+    for (RProblemType problemType : problemTypes)
+    {
+        problemNameWidth = std::max(problemNameWidth,RProblem::getName(problemType).length());
+    }
+    for (RProblemType problemType : problemTypes)
+    {
+        QList<RMaterialProperty::Type> propertyTypes = RMaterialProperty::getTypes(problemType);
+
+        QStringList propertyIds;
+        for (RMaterialProperty::Type type : propertyTypes)
+        {
+            propertyIds.append(RMaterialProperty::getId(type));
+        }
+
+        spec += "   " + RProblem::getName(problemType).leftJustified(problemNameWidth+2)
+              + (propertyIds.isEmpty() ? QString("(none)") : propertyIds.join(", ")) + "\n";
+    }
+    spec += "\n";
+    spec += "7. EXAMPLE\n";
+    spec += "\n";
+    spec += "   Liquid water with a temperature dependent density and a constant heat capacity\n";
+    spec += "   (shown compacted - the writer places every member on its own line):\n";
+    spec += "\n";
+    spec += "   {\n";
+    spec += "       \"id\": \"6f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n";
+    spec += "       \"name\": \"Water\",\n";
+    spec += "       \"properties\": [\n";
+    spec += "           {\n";
+    spec += "               \"keyType\": \"" + keyTypeId + "\",\n";
+    spec += "               \"table\": [\n";
+    spec += "                   { \"key\": 273.15, \"value\": 999.8 },\n";
+    spec += "                   { \"key\": 293.15, \"value\": 998.2 },\n";
+    spec += "                   { \"key\": 373.15, \"value\": 958.4 }\n";
+    spec += "               ],\n";
+    spec += "               \"type\": \"" + RMaterialProperty::getId(RMaterialProperty::Density) + "\"\n";
+    spec += "           },\n";
+    spec += "           {\n";
+    spec += "               \"keyType\": \"" + keyTypeId + "\",\n";
+    spec += "               \"table\": [\n";
+    spec += "                   { \"key\": 293.15, \"value\": 4182 }\n";
+    spec += "               ],\n";
+    spec += "               \"type\": \"" + RMaterialProperty::getId(RMaterialProperty::HeatCapacity) + "\"\n";
+    spec += "           }\n";
+    spec += "       ],\n";
+    spec += "       \"state\": \"" + QString::number(int(RMaterial::Liquid)) + "\"\n";
+    spec += "   }\n";
+
+    return spec.toLatin1();
 }
 
 void RMaterial::readJson(const QString &fileName)
