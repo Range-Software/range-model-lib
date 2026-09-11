@@ -472,7 +472,14 @@ QString RModel::write(const QString &fileName, bool writeLinkFile) const
 
     uint recordNumber = 0;
 
-    if (this->getTimeSolver().getEnabled())
+    // A harmonic acoustic analysis produces one record per frequency, no matter
+    // whether the time solver happens to be enabled.
+    if ((this->getProblemTaskTree().getProblemTypeMask() & R_PROBLEM_ACOUSTICS) &&
+        this->getProblemSetup().getAcousticSetup().getAnalysisType() == R_ACOUSTIC_ANALYSIS_HARMONIC)
+    {
+        recordNumber = this->getProblemSetup().getAcousticSetup().getFrequencyIndex() + 1;
+    }
+    else if (this->getTimeSolver().getEnabled())
     {
         recordNumber = this->getTimeSolver().getCurrentTimeStep() + 1;
     }

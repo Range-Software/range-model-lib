@@ -1,6 +1,7 @@
 #ifndef RML_PROBLEM_SETUP_H
 #define RML_PROBLEM_SETUP_H
 
+#include "rml_acoustic_setup.h"
 #include "rml_mesh_setup.h"
 #include "rml_modal_setup.h"
 #include "rml_radiation_setup.h"
@@ -18,6 +19,8 @@ class RProblemSetup
         RModalSetup modalSetup;
         //! Mesh setup.
         RMeshSetup meshSetup;
+        //! Acoustic setup.
+        RAcousticSetup acousticSetup;
 
     private:
 
@@ -70,6 +73,15 @@ class RProblemSetup
 
         //! Set mesh setup.
         void setMeshSetup(const RMeshSetup &meshSetup);
+
+        //! Get const reference to acoustic setup.
+        const RAcousticSetup &getAcousticSetup(void) const;
+
+        //! Get reference to acoustic setup.
+        RAcousticSetup &getAcousticSetup(void);
+
+        //! Set acoustic setup.
+        void setAcousticSetup(const RAcousticSetup &acousticSetup);
 
         //! Convert to printable string.
         QString toString() const;

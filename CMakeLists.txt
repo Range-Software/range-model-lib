@@ -1,6 +1,7 @@
 # Create a static library
 qt_add_library(range-model-lib
     STATIC
+        src/rml_acoustic_setup.cpp
         src/rml_boundary_condition.cpp
         src/rml_condition.cpp
         src/rml_condition_component.cpp
@@ -70,6 +71,7 @@ qt_add_library(range-model-lib
         src/rml_view_factor_row.cpp
         src/rml_volume.cpp
 
+        include/rml_acoustic_setup.h
         include/rml_boundary_condition.h
         include/rml_condition.h
         include/rml_condition_component.h
@@ -146,7 +148,7 @@ qt_add_library(range-model-lib
 target_compile_definitions(range-model-lib
     PRIVATE
         FILE_MAJOR_VERSION=1
-        FILE_MINOR_VERSION=2
+        FILE_MINOR_VERSION=3
         FILE_RELEASE_VERSION=0
         TETLIBRARY
 )

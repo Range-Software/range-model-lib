@@ -21,7 +21,8 @@ const RBoundaryConditionDesc boundaryConditionDesc [] =
 {
     /* ID, Name, optional, explicit, point, line, surface, volume, has local direction */
     { "bc-none", "None", false, false, false, false, false, false, false, R_PROBLEM_NONE },
-    { "bc-absorbing_boundary", "Absorbing boundary", false, false, true, true, true, true, false, R_PROBLEM_ACOUSTICS | R_PROBLEM_WAVE},
+    { "bc-absorbing_boundary", "Absorbing boundary", false, false, true, true, true, false, false, R_PROBLEM_ACOUSTICS | R_PROBLEM_WAVE },
+    { "bc-acoustic_impedance", "Acoustic impedance", false, false, true, true, true, false, false, R_PROBLEM_ACOUSTICS },
     { "bc-charge_density", "Charge density", false, false, true, true, true, true, false, R_PROBLEM_ELECTROSTATICS },
     { "bc-forced_convection", "Forced convection", false, false, false, false, true, false, false, R_PROBLEM_HEAT },
     { "bc-natural_convection", "Natural convection", false, false, false, false, true, false, false, R_PROBLEM_HEAT },
@@ -44,7 +45,7 @@ const RBoundaryConditionDesc boundaryConditionDesc [] =
     { "bc-pressure_implicit", "Pressure (implicit)", false, false, false, false, true, false, false, R_PROBLEM_FLUID | R_PROBLEM_POTENTIAL },
     { "bc-radiation_boundary", "Radiation boundary", false, false, false, false, true, false, false, R_PROBLEM_RADIATIVE_HEAT },
     { "bc-temperature", "Temperature", false, true, true, true, true, true, false, R_PROBLEM_HEAT | R_PROBLEM_FLUID_HEAT },
-    { "bc-velocity", "Velocity", false, false, false, false, true, false, false, R_PROBLEM_ACOUSTICS },
+    { "bc-velocity", "Velocity", false, false, true, true, true, false, false, R_PROBLEM_ACOUSTICS },
     { "bc-velocity_potential", "Velocity potential", false, true, true, true, true, false, false, R_PROBLEM_ACOUSTICS },
     { "bc-wall", "Wall", false, true, true, true, true, false, false, R_PROBLEM_FLUID },
     { "bc-wall_frictionless", "Wall (frictionless)", false, true, true, true, true, false, false, R_PROBLEM_FLUID },
@@ -55,7 +56,8 @@ const RBoundaryConditionDesc boundaryConditionDesc [] =
 
 
 RBoundaryCondition::RBoundaryCondition (RBoundaryConditionType type)
-    : direction(0.0,0.0,1.0)
+    : explicitLocalDirection(false)
+    , direction(0.0,0.0,1.0)
 {
     this->setType(type);
     this->_init();
@@ -83,6 +85,7 @@ void RBoundaryCondition::_init (const RBoundaryCondition *pCondition)
         this->optional = pCondition->optional;
         this->isExplicit = pCondition->isExplicit;
         this->hasLocalDirection = pCondition->hasLocalDirection;
+        this->explicitLocalDirection = pCondition->explicitLocalDirection;
         this->direction = pCondition->direction;
     }
 } /* RBoundaryCondition::_init */
@@ -131,6 +134,18 @@ bool RBoundaryCondition::getHasLocalDirection() const
 {
     return this->hasLocalDirection;
 } /* RBoundaryCondition::getHasLocalDirection */
+
+bool RBoundaryCondition::getExplicitLocalDirection() const
+{
+    return this->explicitLocalDirection;
+} /* RBoundaryCondition::getExplicitLocalDirection */
+
+
+void RBoundaryCondition::setExplicitLocalDirection(bool explicitLocalDirection)
+{
+    this->explicitLocalDirection = explicitLocalDirection;
+} /* RBoundaryCondition::setExplicitLocalDirection */
+
 
 const RR3Vector &RBoundaryCondition::getLocalDirection() const
 {
@@ -325,6 +340,10 @@ std::vector<RVariableType> RBoundaryCondition::getDefaultComponents
         case R_BOUNDARY_CONDITION_NONE:
             break;
         case R_BOUNDARY_CONDITION_ABSORBING_BOUNDARY:
+            componentTypes.push_back (R_VARIABLE_ACOUSTIC_ABSORPTION_COEFFICIENT);
+            break;
+        case R_BOUNDARY_CONDITION_ACOUSTIC_IMPEDANCE:
+            componentTypes.push_back (R_VARIABLE_ACOUSTIC_IMPEDANCE);
             break;
         case R_BOUNDARY_CONDITION_CHARGE_DENSITY:
             componentTypes.push_back (R_VARIABLE_CHARGE_DENSITY);

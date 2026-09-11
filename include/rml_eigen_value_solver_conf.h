@@ -15,8 +15,12 @@ class REigenValueSolverConf
         {
             None = 0,
             Lanczos,
-            Arnoldi,
-            Rayleigh,
+            //! Subspace iteration with a Rayleigh-Ritz projection - several of
+            //! the lowest eigen pairs.
+            SubspaceIteration,
+            //! Inverse power iteration with a Rayleigh quotient - the lowest
+            //! eigen pair only.
+            InversePowerIteration,
             NTypes
         };
 

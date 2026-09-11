@@ -59,13 +59,13 @@ typedef enum _RProblemType
 typedef int RProblemTypeMask;
 
 /*
-- R_PROBLEM_ACOUSTICS -> // NOT WORKING (constructs RSolverAcoustic anyway)
 - R_PROBLEM_POTENTIAL -> // NOT IMPLEMENTED (no solver constructed at all)
 - R_PROBLEM_WAVE -> // NOT WORKING (constructs RSolverWave anyway)
 */
 
 #define R_PROBLEM_ALL \
     ( \
+        R_PROBLEM_ACOUSTICS | \
         R_PROBLEM_ELECTROSTATICS | \
         R_PROBLEM_MAGNETOSTATICS | \
         R_PROBLEM_FLUID | \

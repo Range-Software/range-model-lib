@@ -23,6 +23,7 @@ class RMaterialProperty : public RValueTable
         enum Type
         {
             None = 0,
+            AcousticDampingFactor,
             Density,
             DynamicViscosity,
             ElectricalConductivity,
@@ -122,8 +123,19 @@ class RMaterialProperty : public RValueTable
         //! Return problem type mask for given condition type.
         static RProblemTypeMask getProblemTypeMask(RMaterialProperty::Type type);
 
-        //! Return list of material properties required for given problem type mask.
+        //! Return mask of problem types for which the property is optional.
+        //! An optional property is offered by the material editor but a solver
+        //! can run without it - either because it has a default, or because
+        //! another property can take its place.
+        static RProblemTypeMask getOptionalProblemTypeMask(RMaterialProperty::Type type);
+
+        //! Return list of material properties applicable to given problem type mask.
         static QList<RMaterialProperty::Type> getTypes(RProblemTypeMask problemTypeMask);
+
+        //! Return list of material properties which at least one of the given
+        //! problem types requires. Properties which are optional for every
+        //! problem type in the mask are left out.
+        static QList<RMaterialProperty::Type> getRequiredTypes(RProblemTypeMask problemTypeMask);
 
         //! Convert material property type to variable type.
         static RVariableType getVariableType(RMaterialProperty::Type type);

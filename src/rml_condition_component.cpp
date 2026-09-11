@@ -3,7 +3,7 @@
 #include "rml_condition_component.h"
 #include "rml_variable.h"
 
-RConditionComponent::RConditionComponent (RVariableType type) : keyType(R_VARIABLE_TIME)
+RConditionComponent::RConditionComponent (RVariableType type) : keyType(R_VARIABLE_TIME), enabled(true)
 {
     this->setType (type);
     this->_init ();

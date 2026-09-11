@@ -206,13 +206,19 @@ void RSparseMatrix::print(void) const
 void RSparseMatrix::mlt(const RSparseMatrix &A, const RRVector &x, RRVector &y)
 {
     y.resize(A.getNRows(),0.0);
+    // resize() keeps whatever the vector held before, so clear it explicitly.
+    y.fill(0.0);
 
     for (uint i=0;i<A.getNRows();i++)
     {
-        std::vector<uint> index = A.getRowIndexes(i);
-        for (uint j=0;j<index.size();j++)
+        const RSparseVector<double> &row = A.getVector(i);
+        double sum = 0.0;
+        for (uint j=0;j<row.size();j++)
         {
-            y[i] += A.getValue(i,j) * x[j];
+            // j is the storage position inside the row - the column of the
+            // value is row.getIndex(j).
+            sum += row.getValue(j) * x[row.getIndex(j)];
         }
+        y[i] = sum;
     }
 }

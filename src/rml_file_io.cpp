@@ -2301,6 +2301,10 @@ void RFileIO::readAscii(RFile &inFile, RBoundaryCondition &boundaryCondition)
     RFileIO::readAscii(inFile,boundaryCondition.direction[0]);
     RFileIO::readAscii(inFile,boundaryCondition.direction[1]);
     RFileIO::readAscii(inFile,boundaryCondition.direction[2]);
+    if (inFile.getVersion() > RVersion(1,2,0))
+    {
+        RFileIO::readAscii(inFile,boundaryCondition.explicitLocalDirection);
+    }
 }
 
 
@@ -2314,6 +2318,10 @@ void RFileIO::readBinary(RFile &inFile, RBoundaryCondition &boundaryCondition)
     RFileIO::readBinary(inFile,boundaryCondition.direction[0]);
     RFileIO::readBinary(inFile,boundaryCondition.direction[1]);
     RFileIO::readBinary(inFile,boundaryCondition.direction[2]);
+    if (inFile.getVersion() > RVersion(1,2,0))
+    {
+        RFileIO::readBinary(inFile,boundaryCondition.explicitLocalDirection);
+    }
 }
 
 
@@ -2355,6 +2363,11 @@ void RFileIO::writeAscii(RSaveFile &outFile, const RBoundaryCondition &boundaryC
         RFileIO::writeAscii(outFile,' ',false);
     }
     RFileIO::writeAscii(outFile,boundaryCondition.direction[2],addNewLine);
+    if (!addNewLine)
+    {
+        RFileIO::writeAscii(outFile,' ',false);
+    }
+    RFileIO::writeAscii(outFile,boundaryCondition.explicitLocalDirection,addNewLine);
 }
 
 
@@ -2368,6 +2381,7 @@ void RFileIO::writeBinary(RSaveFile &outFile, const RBoundaryCondition &boundary
     RFileIO::writeBinary(outFile,boundaryCondition.direction[0]);
     RFileIO::writeBinary(outFile,boundaryCondition.direction[1]);
     RFileIO::writeBinary(outFile,boundaryCondition.direction[2]);
+    RFileIO::writeBinary(outFile,boundaryCondition.explicitLocalDirection);
 }
 
 
@@ -3911,6 +3925,125 @@ void RFileIO::writeBinary(RSaveFile &outFile, const RModalMethod &method)
 
 
 /*********************************************************************
+ *  RAcousticAnalysisType                                            *
+ *********************************************************************/
+
+
+void RFileIO::readAscii(RFile &inFile, RAcousticAnalysisType &acousticAnalysisType)
+{
+    int iValue;
+    inFile.getTextStream() >> iValue;
+    if (inFile.getTextStream().status() != QTextStream::Ok)
+    {
+        throw RError(RError::Type::ReadFile,R_ERROR_REF, "Failed to read RAcousticAnalysisType value.");
+    }
+    acousticAnalysisType = RAcousticAnalysisType(iValue);
+} /* RFileIO::readAscii */
+
+
+void RFileIO::readBinary(RFile &inFile, RAcousticAnalysisType &acousticAnalysisType)
+{
+    inFile.read((char*)&acousticAnalysisType,sizeof(RAcousticAnalysisType));
+    if (inFile.error() != RFile::NoError)
+    {
+        throw RError(RError::Type::ReadFile,R_ERROR_REF,"Failed to read RAcousticAnalysisType value.");
+    }
+} /* RFileIO::readBinary */
+
+
+void RFileIO::writeAscii(RSaveFile &outFile, const RAcousticAnalysisType &acousticAnalysisType, bool addNewLine)
+{
+    if (!addNewLine)
+    {
+        outFile.getTextStream() << int(acousticAnalysisType);
+    }
+    else
+    {
+        outFile.getTextStream() << int(acousticAnalysisType) << RConstants::endl;
+    }
+    if (outFile.getTextStream().status() != QTextStream::Ok)
+    {
+        throw RError(RError::Type::WriteFile,R_ERROR_REF,"Failed to write RAcousticAnalysisType value.");
+    }
+} /* RFileIO::writeAscii */
+
+
+void RFileIO::writeBinary(RSaveFile &outFile, const RAcousticAnalysisType &acousticAnalysisType)
+{
+    outFile.write((char*)&acousticAnalysisType,sizeof(RAcousticAnalysisType));
+    if (outFile.error() != RFile::NoError)
+    {
+        throw RError(RError::Type::WriteFile,R_ERROR_REF,"Failed to write RAcousticAnalysisType value.");
+    }
+} /* RFileIO::writeBinary */
+
+
+/*********************************************************************
+ *  RAcousticSetup                                                   *
+ *********************************************************************/
+
+void RFileIO::readAscii(RFile &inFile, RAcousticSetup &acousticSetup)
+{
+    RFileIO::readAscii(inFile,acousticSetup.analysisType);
+    RFileIO::readAscii(inFile,acousticSetup.frequencyStart);
+    RFileIO::readAscii(inFile,acousticSetup.frequencyStep);
+    RFileIO::readAscii(inFile,acousticSetup.nFrequencies);
+    RFileIO::readAscii(inFile,acousticSetup.referencePressure);
+    RFileIO::readAscii(inFile,acousticSetup.frequencyIndex);
+}
+
+void RFileIO::readBinary(RFile &inFile, RAcousticSetup &acousticSetup)
+{
+    RFileIO::readBinary(inFile,acousticSetup.analysisType);
+    RFileIO::readBinary(inFile,acousticSetup.frequencyStart);
+    RFileIO::readBinary(inFile,acousticSetup.frequencyStep);
+    RFileIO::readBinary(inFile,acousticSetup.nFrequencies);
+    RFileIO::readBinary(inFile,acousticSetup.referencePressure);
+    RFileIO::readBinary(inFile,acousticSetup.frequencyIndex);
+}
+
+void RFileIO::writeAscii(RSaveFile &outFile, const RAcousticSetup &acousticSetup, bool addNewLine)
+{
+    RFileIO::writeAscii(outFile,acousticSetup.analysisType,addNewLine);
+    if (!addNewLine)
+    {
+        RFileIO::writeAscii(outFile,' ',false);
+    }
+    RFileIO::writeAscii(outFile,acousticSetup.frequencyStart,addNewLine);
+    if (!addNewLine)
+    {
+        RFileIO::writeAscii(outFile,' ',false);
+    }
+    RFileIO::writeAscii(outFile,acousticSetup.frequencyStep,addNewLine);
+    if (!addNewLine)
+    {
+        RFileIO::writeAscii(outFile,' ',false);
+    }
+    RFileIO::writeAscii(outFile,acousticSetup.nFrequencies,addNewLine);
+    if (!addNewLine)
+    {
+        RFileIO::writeAscii(outFile,' ',false);
+    }
+    RFileIO::writeAscii(outFile,acousticSetup.referencePressure,addNewLine);
+    if (!addNewLine)
+    {
+        RFileIO::writeAscii(outFile,' ',false);
+    }
+    RFileIO::writeAscii(outFile,acousticSetup.frequencyIndex,addNewLine);
+}
+
+void RFileIO::writeBinary(RSaveFile &outFile, const RAcousticSetup &acousticSetup)
+{
+    RFileIO::writeBinary(outFile,acousticSetup.analysisType);
+    RFileIO::writeBinary(outFile,acousticSetup.frequencyStart);
+    RFileIO::writeBinary(outFile,acousticSetup.frequencyStep);
+    RFileIO::writeBinary(outFile,acousticSetup.nFrequencies);
+    RFileIO::writeBinary(outFile,acousticSetup.referencePressure);
+    RFileIO::writeBinary(outFile,acousticSetup.frequencyIndex);
+}
+
+
+/*********************************************************************
  *  RTimeSolver                                                      *
  *********************************************************************/
 
@@ -4303,6 +4436,10 @@ void RFileIO::readAscii(RFile &inFile, RProblemSetup &problemSetup)
     {
         RFileIO::readAscii(inFile,problemSetup.meshSetup);
     }
+    if (inFile.getVersion() > RVersion(1,2,0))
+    {
+        RFileIO::readAscii(inFile,problemSetup.acousticSetup);
+    }
 }
 
 void RFileIO::readBinary(RFile &inFile, RProblemSetup &problemSetup)
@@ -4313,6 +4450,10 @@ void RFileIO::readBinary(RFile &inFile, RProblemSetup &problemSetup)
     if (inFile.getVersion() > RVersion(0,3,4))
     {
         RFileIO::readBinary(inFile,problemSetup.meshSetup);
+    }
+    if (inFile.getVersion() > RVersion(1,2,0))
+    {
+        RFileIO::readBinary(inFile,problemSetup.acousticSetup);
     }
 }
 
@@ -4334,6 +4475,11 @@ void RFileIO::writeAscii(RSaveFile &outFile, const RProblemSetup &problemSetup, 
         RFileIO::writeAscii(outFile,' ',false);
     }
     RFileIO::writeAscii(outFile,problemSetup.meshSetup,addNewLine);
+    if (!addNewLine)
+    {
+        RFileIO::writeAscii(outFile,' ',false);
+    }
+    RFileIO::writeAscii(outFile,problemSetup.acousticSetup,addNewLine);
 }
 
 void RFileIO::writeBinary(RSaveFile &outFile, const RProblemSetup &problemSetup)
@@ -4342,6 +4488,7 @@ void RFileIO::writeBinary(RSaveFile &outFile, const RProblemSetup &problemSetup)
     RFileIO::writeBinary(outFile,problemSetup.radiationSetup);
     RFileIO::writeBinary(outFile,problemSetup.modalSetup);
     RFileIO::writeBinary(outFile,problemSetup.meshSetup);
+    RFileIO::writeBinary(outFile,problemSetup.acousticSetup);
 }
 
 

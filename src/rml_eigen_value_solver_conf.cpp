@@ -9,8 +9,8 @@ static REigenValueSolverDesc eigenValueSolverDesc [] =
 {
     { "None" },
     { "Lanczos" },
-    { "Arnoldi" },
-    { "Rayleigh" }
+    { "Subspace iteration" },
+    { "Inverse power iteration" }
 };
 
 

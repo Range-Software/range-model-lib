@@ -8,6 +8,7 @@ void RProblemSetup::_init(const RProblemSetup *pProblemSetup)
         this->radiationSetup = pProblemSetup->radiationSetup;
         this->modalSetup = pProblemSetup->modalSetup;
         this->meshSetup = pProblemSetup->meshSetup;
+        this->acousticSetup = pProblemSetup->acousticSetup;
     }
 }
 
@@ -88,10 +89,26 @@ void RProblemSetup::setMeshSetup(const RMeshSetup &meshSetup)
     this->meshSetup = meshSetup;
 }
 
+const RAcousticSetup &RProblemSetup::getAcousticSetup() const
+{
+    return this->acousticSetup;
+}
+
+RAcousticSetup &RProblemSetup::getAcousticSetup()
+{
+    return this->acousticSetup;
+}
+
+void RProblemSetup::setAcousticSetup(const RAcousticSetup &acousticSetup)
+{
+    this->acousticSetup = acousticSetup;
+}
+
 QString RProblemSetup::toString() const
 {
     return "{ Restart: " + QString(this->restart?"True":"False")
             + ", Radiation setup: " + this->radiationSetup.toString()
             + ", Modal setup: " + this->modalSetup.toString()
-            + ", Mesh setup: " + this->meshSetup.toString() + " }";
+            + ", Mesh setup: " + this->meshSetup.toString()
+            + ", Acoustic setup: " + this->acousticSetup.toString() + " }";
 }

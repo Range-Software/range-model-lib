@@ -8,6 +8,7 @@
 #include "rml_file.h"
 #include "rml_save_file.h"
 
+#include "rml_acoustic_setup.h"
 #include "rml_boundary_condition.h"
 #include "rml_condition.h"
 #include "rml_condition_component.h"
@@ -830,6 +831,28 @@ class RFileIO
         static void writeAscii(RSaveFile &outFile, const RModalSetup &modalSetup, bool addNewLine = true);
         //! Write RModalSetup.
         static void writeBinary(RSaveFile &outFile, const RModalSetup &modalSetup);
+
+        // RAcousticSetup
+
+        //! Read RAcousticSetup.
+        static void readAscii(RFile &inFile, RAcousticSetup &acousticSetup);
+        //! Read RAcousticSetup.
+        static void readBinary(RFile &inFile, RAcousticSetup &acousticSetup);
+        //! Write RAcousticSetup.
+        static void writeAscii(RSaveFile &outFile, const RAcousticSetup &acousticSetup, bool addNewLine = true);
+        //! Write RAcousticSetup.
+        static void writeBinary(RSaveFile &outFile, const RAcousticSetup &acousticSetup);
+
+        // RAcousticAnalysisType
+
+        //! Read RAcousticAnalysisType.
+        static void readAscii(RFile &inFile, RAcousticAnalysisType &acousticAnalysisType);
+        //! Read RAcousticAnalysisType.
+        static void readBinary(RFile &inFile, RAcousticAnalysisType &acousticAnalysisType);
+        //! Write RAcousticAnalysisType.
+        static void writeAscii(RSaveFile &outFile, const RAcousticAnalysisType &acousticAnalysisType, bool addNewLine = true);
+        //! Write RAcousticAnalysisType.
+        static void writeBinary(RSaveFile &outFile, const RAcousticAnalysisType &acousticAnalysisType);
 
         // RMeshSetup
 

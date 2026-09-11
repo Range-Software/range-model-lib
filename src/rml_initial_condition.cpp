@@ -25,8 +25,10 @@ const RInitialConditionDesc initialConditionDesc [] =
     { "ic-temperature", "Temperature",
       R_PROBLEM_HEAT | R_PROBLEM_RADIATIVE_HEAT | R_PROBLEM_FLUID_HEAT },
     { "ic-velocity", "Velocity",
-      R_PROBLEM_FLUID | R_PROBLEM_POTENTIAL | R_PROBLEM_STRESS | R_PROBLEM_STRESS_MODAL },
+      R_PROBLEM_FLUID | R_PROBLEM_POTENTIAL },
     { "ic-velocity_potential", "Velocity potential",
+      R_PROBLEM_ACOUSTICS },
+    { "ic-velocity_potential_velocity", "Velocity potential / s",
       R_PROBLEM_ACOUSTICS },
     { "ic-wave_displacement", "Wave displacement",
       R_PROBLEM_WAVE },
@@ -176,6 +178,9 @@ std::vector<RVariableType> RInitialCondition::getDefaultComponents
             break;
         case R_INITIAL_CONDITION_VELOCITY_POTENTIAL:
             componentTypes.push_back (R_VARIABLE_POTENTIAL);
+            break;
+        case R_INITIAL_CONDITION_VELOCITY_POTENTIAL_VELOCITY:
+            componentTypes.push_back (R_VARIABLE_POTENTIAL_VELOCITY);
             break;
         case R_INITIAL_CONDITION_WAVE_DISPLACEMENT:
             componentTypes.push_back (R_VARIABLE_WAVE_DISPLACEMENT);

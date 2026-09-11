@@ -18,6 +18,7 @@ typedef enum _RBoundaryConditionType
 {
     R_BOUNDARY_CONDITION_NONE = 0,
     R_BOUNDARY_CONDITION_ABSORBING_BOUNDARY,
+    R_BOUNDARY_CONDITION_ACOUSTIC_IMPEDANCE,
     R_BOUNDARY_CONDITION_CHARGE_DENSITY,
     R_BOUNDARY_CONDITION_CONVECTION_FORCED,
     R_BOUNDARY_CONDITION_CONVECTION_NATURAL,
@@ -88,6 +89,11 @@ class RBoundaryCondition : public RCondition
         bool isExplicit;
         //! Indicates whether the boundary condition has local direction.
         bool hasLocalDirection;
+        //! Whether the local direction below overrides the one which would
+        //! otherwise be derived from the geometry of the entity.
+        //! Point entities have no geometric direction to derive, so they always
+        //! use the stored direction regardless of this flag.
+        bool explicitLocalDirection;
         //! Local direction.
         RR3Vector direction;
 
@@ -123,6 +129,12 @@ class RBoundaryCondition : public RCondition
 
         //! Return whether the condition has local direction.
         bool getHasLocalDirection() const;
+
+        //! Return whether the stored local direction overrides the geometric one.
+        bool getExplicitLocalDirection() const;
+
+        //! Set whether the stored local direction overrides the geometric one.
+        void setExplicitLocalDirection(bool explicitLocalDirection);
 
         //! Return reference local direction.
         const RR3Vector &getLocalDirection() const;

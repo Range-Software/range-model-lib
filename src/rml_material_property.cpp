@@ -11,24 +11,29 @@ typedef struct _RMaterialPropertyDesc
     QString          id;
     RVariableType    variableType;
     RProblemTypeMask problemTypeMask;
+    //! Problem types for which the property is applicable but not required.
+    RProblemTypeMask optionalProblemTypeMask;
 } RMaterialPropertyDesc;
 
 const RMaterialPropertyDesc materialPropertyDesc [] =
 {
-    { "prop-none",                          R_VARIABLE_NONE,                          R_PROBLEM_NONE },
-    { "prop-density",                       R_VARIABLE_DENSITY,                       R_PROBLEM_ACOUSTICS | R_PROBLEM_FLUID_PARTICLE | R_PROBLEM_ELECTROSTATICS | R_PROBLEM_FLUID | R_PROBLEM_FLUID_HEAT | R_PROBLEM_HEAT | R_PROBLEM_STRESS | R_PROBLEM_STRESS_MODAL | R_PROBLEM_POTENTIAL | R_PROBLEM_WAVE },
-    { "prop-dynamic_viscosity",             R_VARIABLE_DYNAMIC_VISCOSITY,             R_PROBLEM_FLUID | R_PROBLEM_FLUID_HEAT },
-    { "prop-electrical_conductivity",       R_VARIABLE_ELECTRICAL_CONDUCTIVITY,       R_PROBLEM_ELECTROSTATICS },
-    { "prop-emissivity",                    R_VARIABLE_EMISSIVITY,                    R_PROBLEM_HEAT },
-    { "prop-heat_capacity",                 R_VARIABLE_HEAT_CAPACITY,                 R_PROBLEM_HEAT | R_PROBLEM_FLUID_HEAT },
-    { "prop-modulus_of_elasticity",         R_VARIABLE_MODULUS_OF_ELASTICITY,         R_PROBLEM_ACOUSTICS | R_PROBLEM_STRESS | R_PROBLEM_STRESS_MODAL },
-    { "prop-permeability_to_fluids",        R_VARIABLE_PERMEABILITY_TO_FLUIDS,        R_PROBLEM_POTENTIAL },
-    { "prop-poisson_ratio",                 R_VARIABLE_POISSON_RATIO,                 R_PROBLEM_STRESS | R_PROBLEM_STRESS_MODAL },
-    { "prop-relative_permittivity",         R_VARIABLE_RELATIVE_PERMITTIVITY,         R_PROBLEM_ELECTROSTATICS },
-    { "prop-soubd_speed",                   R_VARIABLE_SOUND_SPEED,                   R_PROBLEM_NONE },
-    { "prop-thermal_conductivity",          R_VARIABLE_THERMAL_CONDUCTIVITY,          R_PROBLEM_HEAT | R_PROBLEM_FLUID_HEAT },
-    { "prop-thermal_expansion_coefficient", R_VARIABLE_THERMAL_EXPANSION_COEFFICIENT, R_PROBLEM_STRESS | R_PROBLEM_STRESS_MODAL },
-    { "prop-custom",                        R_VARIABLE_CUSTOM,                        R_PROBLEM_NONE }
+    { "prop-none",                          R_VARIABLE_NONE,                          R_PROBLEM_NONE, R_PROBLEM_NONE },
+    { "prop-acoustic_damping_factor",       R_VARIABLE_ACOUSTIC_DAMPING_FACTOR,       R_PROBLEM_ACOUSTICS, R_PROBLEM_ACOUSTICS },
+    { "prop-density",                       R_VARIABLE_DENSITY,                       R_PROBLEM_ACOUSTICS | R_PROBLEM_FLUID_PARTICLE | R_PROBLEM_ELECTROSTATICS | R_PROBLEM_FLUID | R_PROBLEM_FLUID_HEAT | R_PROBLEM_HEAT | R_PROBLEM_STRESS | R_PROBLEM_STRESS_MODAL | R_PROBLEM_POTENTIAL | R_PROBLEM_WAVE, R_PROBLEM_NONE },
+    { "prop-dynamic_viscosity",             R_VARIABLE_DYNAMIC_VISCOSITY,             R_PROBLEM_FLUID | R_PROBLEM_FLUID_HEAT, R_PROBLEM_NONE },
+    { "prop-electrical_conductivity",       R_VARIABLE_ELECTRICAL_CONDUCTIVITY,       R_PROBLEM_ELECTROSTATICS, R_PROBLEM_NONE },
+    { "prop-emissivity",                    R_VARIABLE_EMISSIVITY,                    R_PROBLEM_HEAT, R_PROBLEM_NONE },
+    { "prop-heat_capacity",                 R_VARIABLE_HEAT_CAPACITY,                 R_PROBLEM_HEAT | R_PROBLEM_FLUID_HEAT, R_PROBLEM_NONE },
+    // Acoustics accepts either the modulus of elasticity or the speed of sound,
+    // so neither of the two alone is required.
+    { "prop-modulus_of_elasticity",         R_VARIABLE_MODULUS_OF_ELASTICITY,         R_PROBLEM_ACOUSTICS | R_PROBLEM_STRESS | R_PROBLEM_STRESS_MODAL, R_PROBLEM_ACOUSTICS },
+    { "prop-permeability_to_fluids",        R_VARIABLE_PERMEABILITY_TO_FLUIDS,        R_PROBLEM_POTENTIAL, R_PROBLEM_NONE },
+    { "prop-poisson_ratio",                 R_VARIABLE_POISSON_RATIO,                 R_PROBLEM_STRESS | R_PROBLEM_STRESS_MODAL, R_PROBLEM_NONE },
+    { "prop-relative_permittivity",         R_VARIABLE_RELATIVE_PERMITTIVITY,         R_PROBLEM_ELECTROSTATICS, R_PROBLEM_NONE },
+    { "prop-soubd_speed",                   R_VARIABLE_SOUND_SPEED,                   R_PROBLEM_ACOUSTICS, R_PROBLEM_ACOUSTICS },
+    { "prop-thermal_conductivity",          R_VARIABLE_THERMAL_CONDUCTIVITY,          R_PROBLEM_HEAT | R_PROBLEM_FLUID_HEAT, R_PROBLEM_NONE },
+    { "prop-thermal_expansion_coefficient", R_VARIABLE_THERMAL_EXPANSION_COEFFICIENT, R_PROBLEM_STRESS | R_PROBLEM_STRESS_MODAL, R_PROBLEM_NONE },
+    { "prop-custom",                        R_VARIABLE_CUSTOM,                        R_PROBLEM_NONE, R_PROBLEM_NONE }
 };
 
 
@@ -194,6 +199,13 @@ RProblemTypeMask RMaterialProperty::getProblemTypeMask(RMaterialProperty::Type t
 } /* RMaterialProperty::getProblemTypeMask */
 
 
+RProblemTypeMask RMaterialProperty::getOptionalProblemTypeMask(RMaterialProperty::Type type)
+{
+    R_ERROR_ASSERT (R_MATERIAL_PROPERTY_TYPE_IS_VALID (type));
+    return materialPropertyDesc[type].optionalProblemTypeMask;
+} /* RMaterialProperty::getOptionalProblemTypeMask */
+
+
 QList<RMaterialProperty::Type> RMaterialProperty::getTypes(RProblemTypeMask problemTypeMask)
 {
     R_ERROR_ASSERT (R_PROBLEM_TYPE_MASK_IS_VALID (problemTypeMask));
@@ -229,6 +241,35 @@ QList<RMaterialProperty::Type> RMaterialProperty::getTypes(RProblemTypeMask prob
 
     return propertyTypes;
 } /* RMaterialProperty::getTypes */
+
+
+QList<RMaterialProperty::Type> RMaterialProperty::getRequiredTypes(RProblemTypeMask problemTypeMask)
+{
+    R_ERROR_ASSERT (R_PROBLEM_TYPE_MASK_IS_VALID (problemTypeMask));
+
+    std::vector<RProblemType> prbTypes = RProblem::getTypes(problemTypeMask);
+
+    QList<RMaterialProperty::Type> propertyTypes;
+
+    for (uint i=0;i<nTypes;i++)
+    {
+        RMaterialProperty::Type propertyType = RMaterialProperty::Type(i);
+
+        for (uint j=0;j<prbTypes.size();j++)
+        {
+            // The property is required as soon as one problem type of the mask
+            // uses it and does not mark it optional.
+            if ((RMaterialProperty::getProblemTypeMask(propertyType) & prbTypes[j]) &&
+                !(RMaterialProperty::getOptionalProblemTypeMask(propertyType) & prbTypes[j]))
+            {
+                propertyTypes.push_back(propertyType);
+                break;
+            }
+        }
+    }
+
+    return propertyTypes;
+} /* RMaterialProperty::getRequiredTypes */
 
 
 RVariableType RMaterialProperty::getVariableType(RMaterialProperty::Type type)
