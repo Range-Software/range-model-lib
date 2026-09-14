@@ -2,6 +2,7 @@
 #define RML_ENTITY_GROUP_DATA_H
 
 #include <map>
+#include <vector>
 
 #include "rml_variable.h"
 
@@ -160,7 +161,17 @@ class REntityGroupData
         void setVariableData(std::map<RVariableType,REntityGroupVariableDisplayTypeMask> &variableData);
 
         //! Find variable type by display type.
+        //! Only the first match is returned - use findVariablesByDisplayType where
+        //! entries referring to variables the model no longer holds must be skipped.
         RVariableType findVariableByDisplayType(REntityGroupVariableDisplayTypeMask displayType) const;
+
+        //! Find all variable types marked with the given display type.
+        std::vector<RVariableType> findVariablesByDisplayType(REntityGroupVariableDisplayTypeMask displayType) const;
+
+        //! Remove the given display type from all variables.
+        //! Only one variable at a time can be displayed as scalar or applied as
+        //! displacement, so assigning one has to clear all the others.
+        void clearVariableDisplayType(REntityGroupVariableDisplayTypeMask displayType);
 
         //! Return variable display name.
         static const QString & getVariableDisplayName ( REntityGroupVariableDisplayTypeMask type );

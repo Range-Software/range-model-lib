@@ -242,6 +242,39 @@ RVariableType REntityGroupData::findVariableByDisplayType(REntityGroupVariableDi
     return R_VARIABLE_NONE;
 }
 
+std::vector<RVariableType> REntityGroupData::findVariablesByDisplayType(REntityGroupVariableDisplayTypeMask displayType) const
+{
+    std::vector<RVariableType> variableTypes;
+    std::map<RVariableType,REntityGroupVariableDisplayTypeMask>::const_iterator iter;
+    for (iter = this->variableData.begin();
+         iter != this->variableData.end();
+         ++iter)
+    {
+        if (iter->second & displayType)
+        {
+            variableTypes.push_back(iter->first);
+        }
+    }
+    return variableTypes;
+}
+
+void REntityGroupData::clearVariableDisplayType(REntityGroupVariableDisplayTypeMask displayType)
+{
+    std::map<RVariableType,REntityGroupVariableDisplayTypeMask>::iterator iter = this->variableData.begin();
+    while (iter != this->variableData.end())
+    {
+        iter->second &= ~displayType;
+        if (iter->second == R_ENTITY_GROUP_VARIABLE_DISPLAY_NONE)
+        {
+            iter = this->variableData.erase(iter);
+        }
+        else
+        {
+            ++iter;
+        }
+    }
+}
+
 const QString &REntityGroupData::getVariableDisplayName(REntityGroupVariableDisplayTypeMask type)
 {
     switch (type)

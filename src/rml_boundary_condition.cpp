@@ -110,6 +110,8 @@ void RBoundaryCondition::setType(RBoundaryConditionType type)
     for (unsigned int i=0;i<componentTypes.size();i++)
     {
         component.setType(componentTypes[i]);
+        component.add(RVariable::getInitValue(component.getKeyType()),
+                      RBoundaryCondition::getDefaultComponentValue(type,componentTypes[i]));
         this->addComponent(component);
     }
 } /* RBoundaryCondition::set_type */
@@ -351,6 +353,7 @@ std::vector<RVariableType> RBoundaryCondition::getDefaultComponents
         case R_BOUNDARY_CONDITION_CONVECTION_FORCED:
             componentTypes.push_back (R_VARIABLE_DENSITY);
             componentTypes.push_back (R_VARIABLE_DYNAMIC_VISCOSITY);
+            componentTypes.push_back (R_VARIABLE_FLUID_TEMPERATURE);
             componentTypes.push_back (R_VARIABLE_HEAT_CAPACITY);
             componentTypes.push_back (R_VARIABLE_HYDRAULIC_DIAMETER);
             componentTypes.push_back (R_VARIABLE_THERMAL_CONDUCTIVITY);
@@ -455,6 +458,38 @@ std::vector<RVariableType> RBoundaryCondition::getDefaultComponents
 
     return componentTypes;
 } /* RBoundaryCondition::getDefaultComponents */
+
+
+double RBoundaryCondition::getDefaultComponentValue (RBoundaryConditionType type,
+                                                     RVariableType variableType)
+{
+    R_ERROR_ASSERT (R_BOUNDARY_CONDITION_TYPE_IS_VALID (type));
+
+    if (type == R_BOUNDARY_CONDITION_CONVECTION_FORCED ||
+        type == R_BOUNDARY_CONDITION_CONVECTION_NATURAL)
+    {
+        // Dry air at 20 degrees Celsius and 101.325 kPa. The expansion
+        // coefficient is the ideal gas value 1/T at the same temperature.
+        // Only the flow and the geometry are left for the user to enter.
+        switch (variableType)
+        {
+            case R_VARIABLE_DENSITY:
+                return 1.2041;
+            case R_VARIABLE_DYNAMIC_VISCOSITY:
+                return 1.8205e-5;
+            case R_VARIABLE_HEAT_CAPACITY:
+                return 1005.0;
+            case R_VARIABLE_THERMAL_CONDUCTIVITY:
+                return 0.02514;
+            case R_VARIABLE_THERMAL_EXPANSION_COEFFICIENT:
+                return 3.4112e-3;
+            default:
+                break;
+        }
+    }
+
+    return RVariable::getInitValue (variableType);
+} /* RBoundaryCondition::getDefaultComponentValue */
 
 
 void operator ++(RBoundaryConditionType &type, int increment)

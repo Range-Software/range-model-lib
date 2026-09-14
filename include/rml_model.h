@@ -692,6 +692,13 @@ class RModel : public RProblem, public RResults
          * Get results values interface                              *
          *************************************************************/
 
+        //! Find position of the variable the entity group displays with the given
+        //! display type.  Entity groups keep display data for variables which may no
+        //! longer be present in the model - results of a previously solved problem
+        //! type - so such entries are skipped instead of hiding a valid one.
+        //! If no such variable can be found RConstants::eod is returned.
+        uint findVariablePositionByDisplayType(const REntityGroupData &entityGroupData, REntityGroupVariableDisplayTypeMask displayTypeMask) const;
+
         //! Find variable for given entity type and ID.
         //! If no such variable can be found 0 is returned.
         const RVariable *findVariableByDisplayType(REntityGroupVariableDisplayTypeMask displayTypeMask, REntityGroupType entityType, uint entityID) const;

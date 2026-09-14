@@ -6,6 +6,12 @@
 #define R_MODAL_ITERATIONS_DEFAULT_NUMBER 100
 #define R_MODAL_ITERATIONS_MIN_NUMBER     1
 #define R_MODAL_ITERATIONS_MAX_NUMBER     1000000
+// Every extracted mode costs a linear solve in every subspace iteration, so the
+// number of modes is the dominant cost of a modal analysis. The default is kept
+// small on purpose - the low modes are the ones which matter.
+#define R_MODAL_MODES_DEFAULT_NUMBER      10
+#define R_MODAL_MODES_MIN_NUMBER          1
+#define R_MODAL_MODES_MAX_NUMBER          1000
 #define R_MODAL_CONVERGENCE_DEFAULT_VALUE 1.0e-9
 #define R_MODAL_CONVERGENCE_MIN_VALUE     0.0
 #define R_MODAL_CONVERGENCE_MAX_VALUE     1.0

@@ -3961,6 +3961,23 @@ void RModel::removeIso(uint position)
 } /* RModel::removeIso */
 
 
+uint RModel::findVariablePositionByDisplayType(const REntityGroupData &entityGroupData, REntityGroupVariableDisplayTypeMask displayTypeMask) const
+{
+    std::vector<RVariableType> variableTypes = entityGroupData.findVariablesByDisplayType(displayTypeMask);
+
+    for (uint i=0;i<variableTypes.size();i++)
+    {
+        uint variablePosition = this->findVariable(variableTypes[i]);
+        if (variablePosition != RConstants::eod)
+        {
+            return variablePosition;
+        }
+    }
+
+    return RConstants::eod;
+} /* RModel::findVariablePositionByDisplayType */
+
+
 const RVariable *RModel::findVariableByDisplayType(REntityGroupVariableDisplayTypeMask displayTypeMask, REntityGroupType entityType, uint entityID) const
 {
     uint groupID = this->getEntityGroupID(entityType,entityID);
@@ -3975,9 +3992,7 @@ const RVariable *RModel::findVariableByDisplayType(REntityGroupVariableDisplayTy
         return nullptr;
     }
 
-    RVariableType variableType = pEntity->getData().findVariableByDisplayType(displayTypeMask);
-
-    uint variablePosition = this->findVariable(variableType);
+    uint variablePosition = this->findVariablePositionByDisplayType(pEntity->getData(),displayTypeMask);
     if (variablePosition == RConstants::eod)
     {
         return nullptr;

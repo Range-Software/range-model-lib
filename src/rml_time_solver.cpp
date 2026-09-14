@@ -79,16 +79,20 @@ RTimeMarchApproximation RTimeSolver::getTimeMarchApproximation() const
 
 double RTimeSolver::getTimeMarchApproximationCoefficient() const
 {
+    // The coefficient weights the new time step in the theta scheme
+    //     ( M + alpha*dt*K ) * u_n+1 = dt*f + ( M - (1-alpha)*dt*K ) * u_n
+    // so alpha = 1 is the fully implicit backward difference and alpha = 0 the
+    // explicit forward difference.
     switch (this->timeMarchApproximation)
     {
         case R_TIME_MARCH_CENTRAL:
             return 0.5;
         case R_TIME_MARCH_BACKWARD:
-            return 0.0;
-        case R_TIME_MARCH_FORWARD:
             return 1.0;
-        default:
+        case R_TIME_MARCH_FORWARD:
             return 0.0;
+        default:
+            return 1.0;
     }
 } /* RTimeSolver::getTimeMarchApproximationCoefficient */
 

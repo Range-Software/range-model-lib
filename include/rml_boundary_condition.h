@@ -195,6 +195,12 @@ class RBoundaryCondition : public RCondition
         //! Return default boundary condition components information.
         static std::vector<RVariableType> getDefaultComponents ( RBoundaryConditionType type );
 
+        //! Return the value a component of the given condition is created with.
+        //! The correlated convection conditions describe a fluid rather than the
+        //! entity they sit on, so they start out holding the properties of air;
+        //! everything else starts at the initial value of its variable.
+        static double getDefaultComponentValue ( RBoundaryConditionType type, RVariableType variableType );
+
         //! Allow RFileIO to access private members.
         friend class RFileIO;
 

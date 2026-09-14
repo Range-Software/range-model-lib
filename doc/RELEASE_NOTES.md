@@ -35,8 +35,31 @@
 - **RInitialCondition** *Velocity* is no longer offered for stress problems -
   the stress solver never read it
 
+- **RBoundaryCondition** *Forced convection* gained a *Fluid temperature*
+  component. The heat solver takes the temperature from the fluid heat solver
+  wherever it has one and uses this value only where it has none, so a surface
+  bordering no meshed fluid can still be convected
+- **RBoundaryCondition::getDefaultComponentValue()** new, returning the value a
+  component of a given condition is created with. *Forced convection* and
+  *Natural convection* start out holding the properties of dry air at 20 degrees
+  Celsius - density, dynamic viscosity, heat capacity, thermal conductivity and
+  the ideal gas expansion coefficient - so only the flow and the geometry are
+  left to enter. Every other condition keeps the initial value of its variable
+- **REntityGroupData::findVariablesByDisplayType()** new, returning every
+  variable marked with a display type rather than only the first
+- **REntityGroupData::clearVariableDisplayType()** new, removing a display type
+  from every variable of an entity. Only one variable at a time can be displayed
+  as scalar or applied as displacement, so assigning one has to clear the others
+- **RModel::findVariablePositionByDisplayType()** new, resolving what an entity
+  displays to a variable the model actually holds
+
 ### Bug fixes
 
+- **RModel::findVariableByDisplayType()** returned nothing when the first
+  variable an entity marks for display is missing from the model, even with a
+  second, valid one marked as well. Entity groups keep display data for
+  variables of a previously solved problem type, and such a left over entry hid
+  the valid one. The lookup now skips variables the model does not hold
 - **RConditionComponent** the *enabled* flag was left uninitialised on default
   construction. It is now true, which is what every existing model file assumes
 - **RSparseMatrix::mlt()** indexed the multiplied vector by the storage position
