@@ -4360,6 +4360,10 @@ void RFileIO::readAscii(RFile &inFile, RProblemTaskItem &problemTaskItem)
 {
     RFileIO::readAscii(inFile,problemTaskItem.problemType);
     RFileIO::readAscii(inFile,problemTaskItem.nIterations);
+    if (inFile.getVersion() > RVersion(1,3,0))
+    {
+        RFileIO::readAscii(inFile,problemTaskItem.cvgValue);
+    }
     uint nChildren = 0;
     RFileIO::readAscii(inFile,nChildren);
     for (uint i=0;i<nChildren;i++)
@@ -4374,6 +4378,10 @@ void RFileIO::readBinary(RFile &inFile, RProblemTaskItem &problemTaskItem)
 {
     RFileIO::readBinary(inFile,problemTaskItem.problemType);
     RFileIO::readBinary(inFile,problemTaskItem.nIterations);
+    if (inFile.getVersion() > RVersion(1,3,0))
+    {
+        RFileIO::readBinary(inFile,problemTaskItem.cvgValue);
+    }
     uint nChildren = 0;
     RFileIO::readBinary(inFile,nChildren);
     for (uint i=0;i<nChildren;i++)
@@ -4392,6 +4400,11 @@ void RFileIO::writeAscii(RSaveFile &outFile, const RProblemTaskItem &problemTask
         RFileIO::writeAscii(outFile,' ',false);
     }
     RFileIO::writeAscii(outFile,problemTaskItem.nIterations,addNewLine);
+    if (!addNewLine)
+    {
+        RFileIO::writeAscii(outFile,' ',false);
+    }
+    RFileIO::writeAscii(outFile,problemTaskItem.cvgValue,addNewLine);
     if (!addNewLine)
     {
         RFileIO::writeAscii(outFile,' ',false);
@@ -4415,6 +4428,7 @@ void RFileIO::writeBinary(RSaveFile &outFile, const RProblemTaskItem &problemTas
 {
     RFileIO::writeBinary(outFile,problemTaskItem.problemType);
     RFileIO::writeBinary(outFile,problemTaskItem.nIterations);
+    RFileIO::writeBinary(outFile,problemTaskItem.cvgValue);
     RFileIO::writeBinary(outFile,uint(problemTaskItem.children.size()));
     for (uint i=0;i<problemTaskItem.children.size();i++)
     {

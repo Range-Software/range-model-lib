@@ -1,3 +1,18 @@
+## Version 1.3.1
+
+### Improvements
+
+- **RProblemTaskItem** carries a `cvgValue` next to `nIterations`. A task group
+  ends its iterations as soon as every task in it reports a convergence below
+  this value, instead of always running the full count. Zero or less runs all of
+  them, which is the former behaviour
+- The value defaults to `1e-5`. A model saved by an earlier version carries no
+  such field and picks up that default on load, so the early exit applies to
+  existing models as well
+- The model file format version was raised to **1.3.1**. The new field is read
+  only from files newer than 1.3.0, so models written by earlier versions still
+  load
+
 ## Version 1.2.0
 
 ### Improvements

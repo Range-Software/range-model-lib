@@ -2,12 +2,15 @@
 
 #include "rml_problem.h"
 
+const double RProblemTaskItem::defaultCvgValue = 1.0e-5;
+
 void RProblemTaskItem::_init(const RProblemTaskItem *pSolverTaskItem)
 {
     if (pSolverTaskItem)
     {
         this->problemType = pSolverTaskItem->problemType;
         this->nIterations = pSolverTaskItem->nIterations;
+        this->cvgValue = pSolverTaskItem->cvgValue;
         this->children = pSolverTaskItem->children;
     }
 }
@@ -15,6 +18,7 @@ void RProblemTaskItem::_init(const RProblemTaskItem *pSolverTaskItem)
 RProblemTaskItem::RProblemTaskItem(RProblemType problemType)
     : problemType(problemType)
     , nIterations(1)
+    , cvgValue(RProblemTaskItem::defaultCvgValue)
 {
     this->_init();
 }
@@ -58,6 +62,7 @@ void RProblemTaskItem::setProblemType(RProblemType problemType)
     if (this->problemType != R_PROBLEM_NONE)
     {
         this->nIterations = 0;
+        this->cvgValue = 0.0;
         this->children.resize(0);
     }
 }
@@ -70,6 +75,16 @@ unsigned int RProblemTaskItem::getNIterations(void) const
 void RProblemTaskItem::setNIterations(unsigned int nIterations)
 {
     this->nIterations = nIterations;
+}
+
+double RProblemTaskItem::getCvgValue(void) const
+{
+    return this->cvgValue;
+}
+
+void RProblemTaskItem::setCvgValue(double cvgValue)
+{
+    this->cvgValue = cvgValue;
 }
 
 unsigned int RProblemTaskItem::getNChildren(void) const
@@ -112,6 +127,10 @@ void RProblemTaskItem::print(bool printTitle) const
     if (this->getProblemType() == R_PROBLEM_NONE)
     {
         RLogger::info("Number of iterations: %u\n",this->getNIterations());
+        if (this->getCvgValue() > 0.0)
+        {
+            RLogger::info("Convergence value: %g\n",this->getCvgValue());
+        }
         RLogger::indent();
         for (unsigned int i=0;i<this->getNChildren();i++)
         {

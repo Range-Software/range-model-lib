@@ -8,6 +8,11 @@
 class RProblemTaskItem
 {
 
+    public:
+
+        //! Default convergence value of a newly created task group.
+        static const double defaultCvgValue;
+
     protected:
 
         //! Problem type.
@@ -15,6 +20,11 @@ class RProblemTaskItem
         //! Number of children iterations.
         //! If problem type is not R_PROBLEM_NONE nIterations is ignored.
         unsigned int nIterations;
+        //! Convergence value ending the children iterations early.
+        //! The iterations stop as soon as every child reports a convergence
+        //! below this value. Zero or less runs all of them.
+        //! If problem type is not R_PROBLEM_NONE cvgValue is ignored.
+        double cvgValue;
         //! Children items.
         //! If problem type is not R_PROBLEM_NONE children is ignored.
         std::vector<RProblemTaskItem> children;
@@ -52,6 +62,12 @@ class RProblemTaskItem
 
         //! Return number of iterations.
         void setNIterations(unsigned int nIterations);
+
+        //! Return convergence value.
+        double getCvgValue(void) const;
+
+        //! Set convergence value.
+        void setCvgValue(double cvgValue);
 
         //! Return number of children.
         unsigned int getNChildren(void) const;
