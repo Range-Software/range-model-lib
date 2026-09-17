@@ -13,6 +13,54 @@
   only from files newer than 1.3.0, so models written by earlier versions still
   load
 
+### Bug fixes
+
+- Four electrostatic variables carry the units they are actually in.
+  **Relative permittivity** was labelled `C^2` although it is a dimensionless
+  multiplier of the vacuum permittivity, and is now `N/A` like the emissivity
+  and the Poisson ratio; **Charge density** was labelled `C` although the solver
+  reads it as a volumetric density, and is now `C/m^3`
+- **Electric energy** and **Joule heat** are `J/m^3` and `W/m^3` rather than `J`
+  and `W`. Both have always been densities - the energy density of the field and
+  the dissipation density a heat task integrates over the element - and the
+  labels were the only thing saying otherwise
+- The units are used for display and in the statistics the solver log prints.
+  They are not written to a model or a material file, so no stored data changes
+- The **Magnetic field** result variable is registered against the magneto-statics
+  problem type rather than electro-statics. It reached the results and monitoring
+  point lists only because a magnetostatic task always brings an electrostatic
+  one with it, and it was offered by an electro-statics task which never
+  computes it
+- **RModel::breakIntersectedElements()** no longer stops with an assertion while
+  removing duplicate elements. A duplicate is marked by folding its second node
+  onto its first, which a point element has no second node for, so two point
+  elements left coincident by the node merge before it failed the
+  `position < nodeIDs.size()` assertion of `RElement::setNodeId()`. Duplicate
+  point elements are collected and removed with the degenerated ones instead
+- An intersection point which already is a vertex of the element it was found on
+  is no longer collected as a point to break that element with. Such a point can
+  not break anything - it was added as a node, produced no new element and was
+  merged away again on every iteration - which is why a model whose bodies meet
+  at shared vertices kept finding the same intersections for as many iterations
+  as it was given. The comment above the check had described this all along
+- The geometric tolerance is relative to the size of the model rather than a
+  fixed hundred machine epsilons. An absolute `2.2e-14` is at or below the
+  rounding error of the intersection arithmetic for anything but a model of unit
+  size, and it made the outcome depend on the units the model was built in. It is
+  now one part in `1e9` of the bounding box diagonal, clamped to a thousandth of
+  the shortest distance between two nodes of an element so that it can not weld
+  geometry which is meant to be there, and floored at the former value. The value
+  in force is logged
+- The iteration stops when it stops making progress. It ran its whole iteration
+  count whenever any intersection point was found, whether or not anything could
+  be broken. It now stops when no element could be broken, and when the number of
+  intersected elements has not changed for three iterations; both say so in the
+  log, and the number of elements actually broken is reported per iteration
+- The loop merging near and duplicate nodes counts down from the node count
+  rather than from the last node index. `getNNodes()-1` underflows on a model
+  with no nodes, and the `i >= oldNNodes` test can never fail when `oldNNodes` is
+  zero, so the index wrapped around instead of the loop ending
+
 ## Version 1.2.0
 
 ### Improvements

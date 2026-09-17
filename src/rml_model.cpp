@@ -8,6 +8,7 @@
 #include <cmath>
 #include <omp.h>
 #include <stack>
+#include <set>
 #include <float.h>
 
 #include <rbl_error.h>
@@ -5443,15 +5444,87 @@ uint RModel::breakIntersectedElements(uint nIterations)
 } /* RModel::breakIntersectedElements */
 
 
+//! Check if given point is one of the vertices of given element.
+static bool pointIsElementNode(const RElement &rElement, const std::vector<RNode> &nodes, const RR3Vector &point, double tolerance)
+{
+    RNode pointNode(point[0],point[1],point[2]);
+    for (uint i=0;i<rElement.size();i++)
+    {
+        if (nodes[rElement.getNodeId(i)].getDistance(pointNode) < tolerance)
+        {
+            return true;
+        }
+    }
+    return false;
+} /* pointIsElementNode */
+
+
 uint RModel::breakIntersectedElements(uint nIterations, const std::vector<uint> &elementIDs)
 {
     uint oldNNodes = this->getNNodes();
     uint nIntersected = 0;
     uint iteration = 0;
-    double tolerance = RConstants::findMachineDoubleEpsilon()*100;
-//    double tolerance = 100.0*RConstants::eps;
+
+    // Geometric tolerance - the distance below which two points are taken for
+    // one and the same point. It is relative to the size of the model so that
+    // it does not depend on the units the model is built in, and so that it
+    // stays above the rounding error of the intersection arithmetic which
+    // produced the points - an absolute value of a few hundred machine epsilons
+    // is at or below that error for anything but a model of unit size. One part
+    // in 1e9 of the model size is still orders of magnitude below any real
+    // feature, so it can not collapse geometry which is meant to be there.
+    double xmin = 0.0, xmax = 0.0, ymin = 0.0, ymax = 0.0, zmin = 0.0, zmax = 0.0;
+    this->findNodeLimits(xmin,xmax,ymin,ymax,zmin,zmax);
+    double modelSize = RR3Vector(xmax-xmin,ymax-ymin,zmax-zmin).length();
+
+    double tolerance = 1.0e-9 * modelSize;
+
+    // Keep the tolerance well below the resolution of the mesh so that it can
+    // not weld geometry which is meant to be there. A model with a large
+    // bounding box and small features would otherwise be given a tolerance of
+    // the order of those features.
+    double shortestDistance = 0.0;
+    bool shortestDistanceFound = false;
+    for (uint i=0;i<elementIDs.size();i++)
+    {
+        const RElement &rElement = this->getElement(elementIDs[i]);
+        for (uint j=0;j<rElement.size();j++)
+        {
+            for (uint k=j+1;k<rElement.size();k++)
+            {
+                double distance = this->getNode(rElement.getNodeId(j)).getDistance(this->getNode(rElement.getNodeId(k)));
+                if (distance > 0.0 && (!shortestDistanceFound || distance < shortestDistance))
+                {
+                    shortestDistance = distance;
+                    shortestDistanceFound = true;
+                }
+            }
+        }
+    }
+    if (shortestDistanceFound && tolerance > shortestDistance/1000.0)
+    {
+        tolerance = shortestDistance/1000.0;
+    }
+
+    // Never go below what the arithmetic can resolve.
+    double minimumTolerance = RConstants::findMachineDoubleEpsilon()*100;
+    if (tolerance < minimumTolerance)
+    {
+        tolerance = minimumTolerance;
+    }
+    RLogger::info("Geometric tolerance = %g (model size = %g, shortest element distance = %g).\n",
+                  tolerance,modelSize,shortestDistance);
 
     std::vector<uint> bElementIDs(elementIDs);
+    // Breaking an element does not necessarily separate it from the element it
+    // intersects, so the count of intersected elements is watched to tell a run
+    // which is still converging from one which is repeating itself.
+    uint nIntersectedFoundPrevious = RConstants::eod;
+    uint nStagnantIterations = 0;
+    // Duplicate point elements can not be degenerated the way the others are -
+    // they are collected here and removed together with the degenerated ones.
+    // Element IDs stay valid because nothing is removed until the loop is over.
+    std::set<uint> dPointElementIDs;
 
     while (iteration < nIterations)
     {
@@ -5508,14 +5581,21 @@ uint RModel::breakIntersectedElements(uint nIterations, const std::vector<uint> 
                         for (it=x.rbegin();it!=x.rend();++it)
                         {
                             // Insert only nodes which are not in the verticies.
-                            bool nodeFound = false;
+                            // A point which already is a vertex of the element
+                            // can not break it - it would be added as a node,
+                            // produce no new element, and be merged away again
+                            // on every iteration.
+                            bool nodeFound = pointIsElementNode(this->getElement(bElementIDs[i]),this->getNodes(),*it,tolerance);
                             QList<RR3Vector>::const_iterator cit;
-                            for (cit=intersectionPoints[i].constBegin();cit!=intersectionPoints[i].constEnd();++cit)
+                            if (!nodeFound)
                             {
-                                if (RR3Vector::findDistance(*it,*cit) < tolerance)
+                                for (cit=intersectionPoints[i].constBegin();cit!=intersectionPoints[i].constEnd();++cit)
                                 {
-                                    nodeFound = true;
-                                    break;
+                                    if (RR3Vector::findDistance(*it,*cit) < tolerance)
+                                    {
+                                        nodeFound = true;
+                                        break;
+                                    }
                                 }
                             }
                             if (!nodeFound)
@@ -5523,13 +5603,16 @@ uint RModel::breakIntersectedElements(uint nIterations, const std::vector<uint> 
                                 intersectionPoints[i].append(*it);
                                 intersectionFound = true;
                             }
-                            nodeFound = false;
-                            for (cit=intersectionPoints[uint(j)].constBegin();cit!=intersectionPoints[uint(j)].constEnd();++cit)
+                            nodeFound = pointIsElementNode(this->getElement(bElementIDs[uint(j)]),this->getNodes(),*it,tolerance);
+                            if (!nodeFound)
                             {
-                                if (RR3Vector::findDistance(*it,*cit) < tolerance)
+                                for (cit=intersectionPoints[uint(j)].constBegin();cit!=intersectionPoints[uint(j)].constEnd();++cit)
                                 {
-                                    nodeFound = true;
-                                    break;
+                                    if (RR3Vector::findDistance(*it,*cit) < tolerance)
+                                    {
+                                        nodeFound = true;
+                                        break;
+                                    }
                                 }
                             }
                             if (!nodeFound)
@@ -5546,6 +5629,8 @@ uint RModel::breakIntersectedElements(uint nIterations, const std::vector<uint> 
         RProgressFinalize("Done");
         RLogger::unindent();
 
+        uint nIntersectedFound = 0;
+
         if (!intersectionFound)
         {
             RLogger::info("No intersections were found.\n");
@@ -5554,7 +5639,6 @@ uint RModel::breakIntersectedElements(uint nIterations, const std::vector<uint> 
         }
         else
         {
-            uint nIntersectedFound = 0;
             for (uint i=0;i<intersectionPoints.size();i++)
             {
                 if (intersectionPoints[i].size() > 0)
@@ -5605,6 +5689,8 @@ uint RModel::breakIntersectedElements(uint nIterations, const std::vector<uint> 
         RLogger::info("Breaking intersected elements\n");
         RLogger::indent();
 
+        uint nIntersectedOld = nIntersected;
+
         RProgressPrintToLog(false);
         RProgressInitialize("Breaking intersected elemets");
         for (uint i=0;i<intersectionPoints.size();i++)
@@ -5639,18 +5725,27 @@ uint RModel::breakIntersectedElements(uint nIterations, const std::vector<uint> 
         }
 
         RProgressFinalize("Done");
+        uint nBroken = nIntersected - nIntersectedOld;
+        RLogger::info("Number of elements that were broken = %u of %u.\n",nBroken,nIntersectedFound);
         RLogger::unindent();
+
+        bool elementBroken = (nBroken > 0);
 
         // Merge near/duplicate nodes.
         RLogger::info("Merging near/duplicate nodes\n");
         RLogger::indent();
         uint nMerged = 0;
-        for (uint i=this->getNNodes()-1;i>=oldNNodes;i--)
+        // Counting down from the node count rather than from the last index -
+        // "i = getNNodes()-1" underflows on a model with no nodes, and the
+        // "i >= oldNNodes" test can never fail when oldNNodes is zero, so the
+        // index wraps around instead of the loop ending.
+        for (uint i=this->getNNodes();i>oldNNodes;i--)
         {
-            uint nId = this->findNearNode(this->getNode(i),tolerance,false,i);
+            uint nodeID = i - 1;
+            uint nId = this->findNearNode(this->getNode(nodeID),tolerance,false,nodeID);
             if (nId != RConstants::eod)
             {
-                this->mergeNodes(nId,i,false,false);
+                this->mergeNodes(nId,nodeID,false,false);
                 nMerged ++;
             }
         }
@@ -5673,7 +5768,16 @@ uint RModel::breakIntersectedElements(uint nIterations, const std::vector<uint> 
                 RElement &rElement2 = this->getElement(bElementIDs[j]);
                 if (rElement1 == rElement2)
                 {
-                    rElement2.setNodeId(1,rElement2.getNodeId(0));
+                    if (rElement2.size() > 1)
+                    {
+                        rElement2.setNodeId(1,rElement2.getNodeId(0));
+                    }
+                    else
+                    {
+                        // A point element has no second node to fold onto the
+                        // first, so it can not be marked by degenerating it.
+                        dPointElementIDs.insert(bElementIDs[j]);
+                    }
                 }
             }
         }
@@ -5681,6 +5785,39 @@ uint RModel::breakIntersectedElements(uint nIterations, const std::vector<uint> 
         RLogger::unindent();
 
         RLogger::unindent();
+
+        // Intersections were found but not one of them could be broken. The
+        // merge above has put the model back the way it was, so every further
+        // iteration would repeat this one - stop instead of running the whole
+        // iteration count to arrive at the same place.
+        if (!elementBroken)
+        {
+            RLogger::warning("Intersections were found but no element could be broken - stopping after %u of %u iterations.\n",
+                             iteration,nIterations);
+            break;
+        }
+
+        // Elements were broken, but breaking them left just as many of them
+        // intersected as before. Breaking an element re-triangulates it without
+        // forcing the intersection line to become an edge, so the pieces can
+        // keep crossing the element they intersect however often this is
+        // repeated. Three iterations at the same count is a repeating one.
+        if (nIntersectedFound == nIntersectedFoundPrevious)
+        {
+            nStagnantIterations++;
+        }
+        else
+        {
+            nStagnantIterations = 0;
+        }
+        nIntersectedFoundPrevious = nIntersectedFound;
+
+        if (nStagnantIterations >= 2)
+        {
+            RLogger::warning("Number of intersected elements stays at %u - stopping after %u of %u iterations.\n",
+                             nIntersectedFound,iteration,nIterations);
+            break;
+        }
     }
 
     // Remove degenerated elements.
@@ -5693,6 +5830,12 @@ uint RModel::breakIntersectedElements(uint nIterations, const std::vector<uint> 
         {
             dElementIDs.push_back(i);
         }
+    }
+    // A point element never has duplicate nodes, so the duplicates found above
+    // are added here. The two sets can not overlap.
+    for (std::set<uint>::const_iterator it=dPointElementIDs.begin();it!=dPointElementIDs.end();++it)
+    {
+        dElementIDs.push_back(*it);
     }
     this->removeElements(dElementIDs,false);
     RLogger::unindent();
