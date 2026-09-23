@@ -12,6 +12,11 @@
 - The model file format version was raised to **1.3.1**. The new field is read
   only from files newer than 1.3.0, so models written by earlier versions still
   load
+- **RMaterial::isFluid()** tells a fluid from a solid. A gas or a liquid state
+  is a fluid and a solid state is not; a material whose state is not specified -
+  every material in the shipped database - is a fluid when it carries a dynamic
+  viscosity. The heat solver uses it to leave fluid domains to the fluid heat
+  solver
 
 ### Bug fixes
 

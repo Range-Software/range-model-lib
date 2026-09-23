@@ -98,6 +98,11 @@ class RMaterial
         //! Set material state.
         void setState(State state);
 
+        //! Return true if the material is a fluid - a gas or a liquid.
+        //! A material whose state is not specified is a fluid when it carries
+        //! a dynamic viscosity, which is the property a solid does not have.
+        bool isFluid() const;
+
         //! Return number of properties.
         uint size() const;
 

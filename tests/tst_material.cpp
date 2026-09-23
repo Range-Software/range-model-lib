@@ -13,6 +13,7 @@ private slots:
     void jsonRoundTrip();
     void fileRoundTrip();
     void fileRoundTrip_data();
+    void isFluid();
 };
 
 void TestMaterial::defaultFileExtension()
@@ -91,6 +92,30 @@ void TestMaterial::fileRoundTrip()
     QCOMPARE(readMaterial.getState(), material.getState());
     QCOMPARE(readMaterial.size(), material.size());
     QVERIFY(readMaterial.propertiesEqual(material));
+}
+
+void TestMaterial::isFluid()
+{
+    RMaterialProperty viscosity(RMaterialProperty::DynamicViscosity);
+    RMaterialProperty conductivity(RMaterialProperty::ThermalConductivity);
+
+    // An explicit state decides on its own.
+    RMaterial gas(RMaterial::Gas);
+    QVERIFY(gas.isFluid());
+    RMaterial liquid(RMaterial::Liquid);
+    QVERIFY(liquid.isFluid());
+    RMaterial solid(RMaterial::Solid);
+    solid.add(viscosity);
+    QVERIFY(!solid.isFluid());
+
+    // With no state the dynamic viscosity tells a fluid from a solid.
+    RMaterial unknownSolid;
+    unknownSolid.add(conductivity);
+    QVERIFY(!unknownSolid.isFluid());
+    RMaterial unknownFluid;
+    unknownFluid.add(conductivity);
+    unknownFluid.add(viscosity);
+    QVERIFY(unknownFluid.isFluid());
 }
 
 QTEST_APPLESS_MAIN(TestMaterial)

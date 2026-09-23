@@ -102,6 +102,22 @@ void RMaterial::setState(State state)
     this->state = state;
 }
 
+bool RMaterial::isFluid() const
+{
+    switch (this->state)
+    {
+        case RMaterial::Gas:
+        case RMaterial::Liquid:
+            return true;
+        case RMaterial::Solid:
+            return false;
+        default:
+            // Material files predating the state carry none - every material in
+            // the shipped database among them - so the properties decide.
+            return (this->findPosition(RMaterialProperty::DynamicViscosity) < this->size());
+    }
+}
+
 uint RMaterial::size() const
 {
     return (uint)this->properties.size();
