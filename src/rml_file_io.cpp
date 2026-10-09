@@ -4044,6 +4044,39 @@ void RFileIO::writeBinary(RSaveFile &outFile, const RAcousticSetup &acousticSetu
 
 
 /*********************************************************************
+ *  RParticleSetup                                                   *
+ *********************************************************************/
+
+void RFileIO::readAscii(RFile &inFile, RParticleSetup &particleSetup)
+{
+    RFileIO::readAscii(inFile,particleSetup.maximumSaturation);
+    RFileIO::readAscii(inFile,particleSetup.diffusionCoefficient);
+}
+
+void RFileIO::readBinary(RFile &inFile, RParticleSetup &particleSetup)
+{
+    RFileIO::readBinary(inFile,particleSetup.maximumSaturation);
+    RFileIO::readBinary(inFile,particleSetup.diffusionCoefficient);
+}
+
+void RFileIO::writeAscii(RSaveFile &outFile, const RParticleSetup &particleSetup, bool addNewLine)
+{
+    RFileIO::writeAscii(outFile,particleSetup.maximumSaturation,addNewLine);
+    if (!addNewLine)
+    {
+        RFileIO::writeAscii(outFile,' ',false);
+    }
+    RFileIO::writeAscii(outFile,particleSetup.diffusionCoefficient,addNewLine);
+}
+
+void RFileIO::writeBinary(RSaveFile &outFile, const RParticleSetup &particleSetup)
+{
+    RFileIO::writeBinary(outFile,particleSetup.maximumSaturation);
+    RFileIO::writeBinary(outFile,particleSetup.diffusionCoefficient);
+}
+
+
+/*********************************************************************
  *  RTimeSolver                                                      *
  *********************************************************************/
 
@@ -4454,6 +4487,10 @@ void RFileIO::readAscii(RFile &inFile, RProblemSetup &problemSetup)
     {
         RFileIO::readAscii(inFile,problemSetup.acousticSetup);
     }
+    if (inFile.getVersion() > RVersion(1,3,1))
+    {
+        RFileIO::readAscii(inFile,problemSetup.particleSetup);
+    }
 }
 
 void RFileIO::readBinary(RFile &inFile, RProblemSetup &problemSetup)
@@ -4468,6 +4505,10 @@ void RFileIO::readBinary(RFile &inFile, RProblemSetup &problemSetup)
     if (inFile.getVersion() > RVersion(1,2,0))
     {
         RFileIO::readBinary(inFile,problemSetup.acousticSetup);
+    }
+    if (inFile.getVersion() > RVersion(1,3,1))
+    {
+        RFileIO::readBinary(inFile,problemSetup.particleSetup);
     }
 }
 
@@ -4494,6 +4535,11 @@ void RFileIO::writeAscii(RSaveFile &outFile, const RProblemSetup &problemSetup, 
         RFileIO::writeAscii(outFile,' ',false);
     }
     RFileIO::writeAscii(outFile,problemSetup.acousticSetup,addNewLine);
+    if (!addNewLine)
+    {
+        RFileIO::writeAscii(outFile,' ',false);
+    }
+    RFileIO::writeAscii(outFile,problemSetup.particleSetup,addNewLine);
 }
 
 void RFileIO::writeBinary(RSaveFile &outFile, const RProblemSetup &problemSetup)
@@ -4503,6 +4549,7 @@ void RFileIO::writeBinary(RSaveFile &outFile, const RProblemSetup &problemSetup)
     RFileIO::writeBinary(outFile,problemSetup.modalSetup);
     RFileIO::writeBinary(outFile,problemSetup.meshSetup);
     RFileIO::writeBinary(outFile,problemSetup.acousticSetup);
+    RFileIO::writeBinary(outFile,problemSetup.particleSetup);
 }
 
 

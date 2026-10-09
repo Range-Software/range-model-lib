@@ -41,6 +41,7 @@ qt_add_library(range-model-lib
         src/rml_monitoring_point.cpp
         src/rml_monitoring_point_manager.cpp
         src/rml_node.cpp
+        src/rml_particle_setup.cpp
         src/rml_patch.cpp
         src/rml_patch_book.cpp
         src/rml_patch_input.cpp
@@ -111,6 +112,7 @@ qt_add_library(range-model-lib
         include/rml_monitoring_point.h
         include/rml_monitoring_point_manager.h
         include/rml_node.h
+        include/rml_particle_setup.h
         include/rml_patch.h
         include/rml_patch_book.h
         include/rml_patch_input.h
@@ -149,7 +151,7 @@ target_compile_definitions(range-model-lib
     PRIVATE
         FILE_MAJOR_VERSION=1
         FILE_MINOR_VERSION=3
-        FILE_RELEASE_VERSION=1
+        FILE_RELEASE_VERSION=2
         TETLIBRARY
 )
 

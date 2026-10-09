@@ -4,6 +4,7 @@
 #include "rml_acoustic_setup.h"
 #include "rml_mesh_setup.h"
 #include "rml_modal_setup.h"
+#include "rml_particle_setup.h"
 #include "rml_radiation_setup.h"
 
 class RProblemSetup
@@ -21,6 +22,8 @@ class RProblemSetup
         RMeshSetup meshSetup;
         //! Acoustic setup.
         RAcousticSetup acousticSetup;
+        //! Particle setup.
+        RParticleSetup particleSetup;
 
     private:
 
@@ -82,6 +85,15 @@ class RProblemSetup
 
         //! Set acoustic setup.
         void setAcousticSetup(const RAcousticSetup &acousticSetup);
+
+        //! Get const reference to particle setup.
+        const RParticleSetup &getParticleSetup(void) const;
+
+        //! Get reference to particle setup.
+        RParticleSetup &getParticleSetup(void);
+
+        //! Set particle setup.
+        void setParticleSetup(const RParticleSetup &particleSetup);
 
         //! Convert to printable string.
         QString toString() const;

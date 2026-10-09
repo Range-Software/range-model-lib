@@ -23,6 +23,7 @@
 #include "rml_material.h"
 #include "rml_mesh_setup.h"
 #include "rml_modal_setup.h"
+#include "rml_particle_setup.h"
 #include "rml_model_data.h"
 #include "rml_monitoring_point.h"
 #include "rml_monitoring_point_manager.h"
@@ -842,6 +843,17 @@ class RFileIO
         static void writeAscii(RSaveFile &outFile, const RAcousticSetup &acousticSetup, bool addNewLine = true);
         //! Write RAcousticSetup.
         static void writeBinary(RSaveFile &outFile, const RAcousticSetup &acousticSetup);
+
+        // RParticleSetup
+
+        //! Read RParticleSetup.
+        static void readAscii(RFile &inFile, RParticleSetup &particleSetup);
+        //! Read RParticleSetup.
+        static void readBinary(RFile &inFile, RParticleSetup &particleSetup);
+        //! Write RParticleSetup.
+        static void writeAscii(RSaveFile &outFile, const RParticleSetup &particleSetup, bool addNewLine = true);
+        //! Write RParticleSetup.
+        static void writeBinary(RSaveFile &outFile, const RParticleSetup &particleSetup);
 
         // RAcousticAnalysisType
 

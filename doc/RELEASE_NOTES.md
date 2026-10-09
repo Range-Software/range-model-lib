@@ -11,6 +11,9 @@
 - **RAcousticSetup** new class, part of **RProblemSetup**, selecting transient
   or harmonic acoustic analysis and holding the frequency sweep and the sound
   pressure level reference pressure
+- **RParticleSetup** new class, part of **RProblemSetup**, holding the
+  contaminant *maximum saturation* `[kg/m^3]`; zero (default) means unlimited,
+  and *diffusion coefficient* `[m^2/s]`; zero (default) means no diffusion
 - **RProblem** acoustics is back in `R_PROBLEM_ALL`, so the application offers it
 - **REigenValueSolverConf** methods `Arnoldi` and `Rayleigh` renamed to
   `SubspaceIteration` and `InversePowerIteration` to match the algorithms used
@@ -55,6 +58,8 @@
 - **RVariable** added acoustic absorption coefficient, damping factor,
   impedance, intensity, phase, sound pressure level and imaginary velocity
   potential
+- **RVariable** added *Relative saturation* (`N/A`), the contaminant
+  concentration divided by the maximum saturation
 - **RVariable** individual stress components and *Force* are now results of
   stress analysis, not only modal analysis
 - **RModel::write()** numbers result records of a harmonic acoustic analysis by
@@ -80,6 +85,8 @@
   solver log statistics; no stored data changes
 - **Magnetic field** variable registered under magnetostatics instead of
   electrostatics, which never computes it
+- **Particle concentration** and **Particle rate** variables registered under
+  contaminant dispersion instead of fluid flow, which never uses them
 - **RModel::findVariableByDisplayType()** skips display entries for variables
   the model does not hold (left over from a previously solved problem type),
   which previously hid a valid second entry
@@ -106,6 +113,8 @@
   setup and the boundary condition explicit local direction flag; files newer
   than 1.3.0 carry the task group `cvgValue`. Older files still load, with
   defaults for missing fields
+- Model file version raised to **1.3.2**. Files newer than 1.3.1 carry the
+  particle setup; older files load with saturation unlimited
 
 ---
 
