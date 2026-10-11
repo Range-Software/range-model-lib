@@ -39,6 +39,8 @@ const RBoundaryConditionDesc boundaryConditionDesc [] =
     { "bc-velocity_outflow", "Velocity (inflow)", false, true, false, false, true, false, false, R_PROBLEM_FLUID | R_PROBLEM_POTENTIAL },
     { "bc-volumetric_flow_rate", "Volumetric flow rate (inflow)", false, true, false, false, true, false, false, R_PROBLEM_FLUID | R_PROBLEM_POTENTIAL },
     { "bc-particle_concentration", "Particle concentration", false, true, true, true, true, false, false, R_PROBLEM_FLUID_PARTICLE },
+    { "bc-particle_flux", "Particle flux (unit area)", false, false, false, false, true, false, false, R_PROBLEM_FLUID_PARTICLE },
+    { "bc-particle_mass_transfer", "Particle mass transfer", false, false, false, false, true, false, false, R_PROBLEM_FLUID_PARTICLE },
     { "bc-particle_rate", "Particle rate", false, false, true, true, true, true, false, R_PROBLEM_FLUID_PARTICLE },
     { "bc-pressure", "Pressure", false, false, false, false, true, false, false, R_PROBLEM_STRESS | R_PROBLEM_STRESS_MODAL },
     { "bc-pressure_explicit", "Pressure (explicit)", false, true, false, false, true, false, false, R_PROBLEM_FLUID | R_PROBLEM_POTENTIAL },
@@ -416,6 +418,13 @@ std::vector<RVariableType> RBoundaryCondition::getDefaultComponents
             break;
         case R_BOUNDARY_CONDITION_PARTICLE_CONCENTRATION:
             componentTypes.push_back (R_VARIABLE_PARTICLE_CONCENTRATION);
+            break;
+        case R_BOUNDARY_CONDITION_PARTICLE_FLUX:
+            componentTypes.push_back (R_VARIABLE_PARTICLE_FLUX);
+            break;
+        case R_BOUNDARY_CONDITION_PARTICLE_MASS_TRANSFER:
+            componentTypes.push_back (R_VARIABLE_PARTICLE_MASS_TRANSFER_COEFFICIENT);
+            componentTypes.push_back (R_VARIABLE_PARTICLE_AMBIENT_CONCENTRATION);
             break;
         case R_BOUNDARY_CONDITION_PRESSURE_IMPLICIT:
             componentTypes.push_back (R_VARIABLE_PRESSURE);

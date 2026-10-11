@@ -260,7 +260,19 @@ void RTimeSolver::harmonizeTimesWithInput(bool restart)
 {
     if (this->enabled)
     {
-        if (restart)
+        if (restart && this->getCurrentTimeStep() == 0 && this->getComputedTime() == 0.0)
+        {
+            // Restart from a state with no computed time step (steady solution or initial state).
+            // Its time is only a placeholder, continuing from it would shift all times. Steady state
+            // is placed at the start time and the transient continues from it.
+            std::vector<double> newTimes(1,this->getInputStartTime());
+            std::vector<double> stepTimes = RTimeSolver::findTimesVector(this->getInputNTimeSteps(),
+                                                                         this->getInputStartTime(),
+                                                                         this->getInputTimeStepSize());
+            newTimes.insert(newTimes.end(),stepTimes.begin(),stepTimes.end());
+            this->setTimes(newTimes);
+        }
+        else if (restart)
         {
             if (this->getCurrentTimeStep() >= this->getNTimeSteps())
             {

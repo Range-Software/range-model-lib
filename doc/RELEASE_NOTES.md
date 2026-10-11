@@ -48,6 +48,14 @@
 - **RBoundaryCondition** added an *explicit local direction* flag; when set, the
   stored local direction replaces the one derived from the entity geometry.
   Existing models load with it clear
+- **RBoundaryCondition** added *Particle flux (unit area)* (Neumann,
+  *Particle flux* `[kg/(m^2*s)]`) and *Particle mass transfer* (Robin, *Mass
+  transfer coefficient* `[m/s]` and *Ambient particle concentration*
+  `[kg/m^3]`) for contaminant dispersion, both on surfaces. Conditions are
+  stored by id, so models saved before keep their conditions
+- **RVariable** *Particle flux* units corrected from `kg/(m^3*s)` to
+  `kg/(m^2*s)` (it was not used before); added *Mass transfer coefficient* and
+  *Ambient particle concentration*
 - **RInitialCondition** added *Velocity potential / s*, setting the initial
   acoustic pressure of a transient analysis
 - **RInitialCondition** *Velocity* no longer offered for stress problems (never
@@ -74,6 +82,15 @@
 - Class **RFileManager** changed to namespace **RFileUtils**
 
 ### Bug fixes
+
+- **RTimeSolver::harmonizeTimesWithInput()** restarting a transient run from a
+  steady solution continued from the placeholder time of the steady model,
+  `1.0 + 0.001 s`, ignoring the start time, so every time (and every time
+  table of a condition) was shifted by `1.001 s`. A restart from a state with
+  no computed time step (current time step and computed time both zero) now
+  places that state at the start time and the first step at
+  `start + dt`; restarting an interrupted transient run still continues from
+  its current time step. Added a test
 
 - **RSparseMatrix::mlt()** indexed the vector by storage position instead of
   column and accumulated onto the existing result, giving wrong products for

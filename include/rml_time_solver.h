@@ -173,6 +173,8 @@ class RTimeSolver
         bool hasTime(double timeValue) const;
 
         //! Harmonize times with input.
+        //! On restart from a state without computed time step (steady solution) the state is placed
+        //! at the input start time, otherwise the time steps continue from the current time step.
         void harmonizeTimesWithInput(bool restart);
 
         //! Return time-marching approximation name.
