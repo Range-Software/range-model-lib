@@ -10,6 +10,7 @@ void RProblemSetup::_init(const RProblemSetup *pProblemSetup)
         this->meshSetup = pProblemSetup->meshSetup;
         this->acousticSetup = pProblemSetup->acousticSetup;
         this->particleSetup = pProblemSetup->particleSetup;
+        this->stressSetup = pProblemSetup->stressSetup;
     }
 }
 
@@ -120,6 +121,21 @@ void RProblemSetup::setParticleSetup(const RParticleSetup &particleSetup)
     this->particleSetup = particleSetup;
 }
 
+const RStressSetup &RProblemSetup::getStressSetup() const
+{
+    return this->stressSetup;
+}
+
+RStressSetup &RProblemSetup::getStressSetup()
+{
+    return this->stressSetup;
+}
+
+void RProblemSetup::setStressSetup(const RStressSetup &stressSetup)
+{
+    this->stressSetup = stressSetup;
+}
+
 QString RProblemSetup::toString() const
 {
     return "{ Restart: " + QString(this->restart?"True":"False")
@@ -127,5 +143,6 @@ QString RProblemSetup::toString() const
             + ", Modal setup: " + this->modalSetup.toString()
             + ", Mesh setup: " + this->meshSetup.toString()
             + ", Acoustic setup: " + this->acousticSetup.toString()
-            + ", Particle setup: " + this->particleSetup.toString() + " }";
+            + ", Particle setup: " + this->particleSetup.toString()
+            + ", Stress setup: " + this->stressSetup.toString() + " }";
 }

@@ -32,6 +32,8 @@ class RMaterialProperty : public RValueTable
             ModulusOfElasiticity,
             PermeabilityToFluids,
             PoissonRatio,
+            RayleighMassDamping,
+            RayleighStiffnessDamping,
             RelativePermittivity,
             SoundSpeed,
             ThermalConductivity,

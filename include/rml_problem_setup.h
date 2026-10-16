@@ -6,6 +6,7 @@
 #include "rml_modal_setup.h"
 #include "rml_particle_setup.h"
 #include "rml_radiation_setup.h"
+#include "rml_stress_setup.h"
 
 class RProblemSetup
 {
@@ -24,6 +25,8 @@ class RProblemSetup
         RAcousticSetup acousticSetup;
         //! Particle setup.
         RParticleSetup particleSetup;
+        //! Stress setup.
+        RStressSetup stressSetup;
 
     private:
 
@@ -94,6 +97,15 @@ class RProblemSetup
 
         //! Set particle setup.
         void setParticleSetup(const RParticleSetup &particleSetup);
+
+        //! Get const reference to stress setup.
+        const RStressSetup &getStressSetup(void) const;
+
+        //! Get reference to stress setup.
+        RStressSetup &getStressSetup(void);
+
+        //! Set stress setup.
+        void setStressSetup(const RStressSetup &stressSetup);
 
         //! Convert to printable string.
         QString toString() const;

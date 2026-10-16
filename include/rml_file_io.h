@@ -24,6 +24,7 @@
 #include "rml_mesh_setup.h"
 #include "rml_modal_setup.h"
 #include "rml_particle_setup.h"
+#include "rml_stress_setup.h"
 #include "rml_model_data.h"
 #include "rml_monitoring_point.h"
 #include "rml_monitoring_point_manager.h"
@@ -854,6 +855,28 @@ class RFileIO
         static void writeAscii(RSaveFile &outFile, const RParticleSetup &particleSetup, bool addNewLine = true);
         //! Write RParticleSetup.
         static void writeBinary(RSaveFile &outFile, const RParticleSetup &particleSetup);
+
+        // RStressSetup
+
+        //! Read RStressSetup.
+        static void readAscii(RFile &inFile, RStressSetup &stressSetup);
+        //! Read RStressSetup.
+        static void readBinary(RFile &inFile, RStressSetup &stressSetup);
+        //! Write RStressSetup.
+        static void writeAscii(RSaveFile &outFile, const RStressSetup &stressSetup, bool addNewLine = true);
+        //! Write RStressSetup.
+        static void writeBinary(RSaveFile &outFile, const RStressSetup &stressSetup);
+
+        // RStressTransientType
+
+        //! Read RStressTransientType.
+        static void readAscii(RFile &inFile, RStressTransientType &stressTransientType);
+        //! Read RStressTransientType.
+        static void readBinary(RFile &inFile, RStressTransientType &stressTransientType);
+        //! Write RStressTransientType.
+        static void writeAscii(RSaveFile &outFile, const RStressTransientType &stressTransientType, bool addNewLine = true);
+        //! Write RStressTransientType.
+        static void writeBinary(RSaveFile &outFile, const RStressTransientType &stressTransientType);
 
         // RAcousticAnalysisType
 

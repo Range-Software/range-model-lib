@@ -22,6 +22,8 @@ const RInitialConditionDesc initialConditionDesc [] =
       R_PROBLEM_FLUID_PARTICLE },
     { "ic-pressure", "Pressure",
       R_PROBLEM_FLUID | R_PROBLEM_POTENTIAL | R_PROBLEM_STRESS | R_PROBLEM_STRESS_MODAL },
+    { "ic-structural_velocity", "Structural velocity",
+      R_PROBLEM_STRESS },
     { "ic-temperature", "Temperature",
       R_PROBLEM_HEAT | R_PROBLEM_RADIATIVE_HEAT | R_PROBLEM_FLUID_HEAT },
     { "ic-velocity", "Velocity",
@@ -167,6 +169,11 @@ std::vector<RVariableType> RInitialCondition::getDefaultComponents
             break;
         case R_INITIAL_CONDITION_PRESSURE:
             componentTypes.push_back (R_VARIABLE_PRESSURE);
+            break;
+        case R_INITIAL_CONDITION_STRUCTURAL_VELOCITY:
+            componentTypes.push_back (R_VARIABLE_STRUCTURAL_VELOCITY_X);
+            componentTypes.push_back (R_VARIABLE_STRUCTURAL_VELOCITY_Y);
+            componentTypes.push_back (R_VARIABLE_STRUCTURAL_VELOCITY_Z);
             break;
         case R_INITIAL_CONDITION_TEMPERATURE:
             componentTypes.push_back (R_VARIABLE_TEMPERATURE);

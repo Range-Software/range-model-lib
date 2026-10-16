@@ -507,7 +507,7 @@ void RMaterial::import(const QString &fileName)
 
 bool RMaterial::validForProblemType(RProblemTypeMask problemTypeMask) const
 {
-    return this->hasProperties(RMaterialProperty::getTypes(problemTypeMask));
+    return this->hasProperties(RMaterialProperty::getRequiredTypes(problemTypeMask));
 }
 
 QString RMaterial::getDefaultFileExtension()
@@ -638,7 +638,7 @@ QByteArray RMaterial::getJsonFileSpecs()
     }
     for (RProblemType problemType : problemTypes)
     {
-        QList<RMaterialProperty::Type> propertyTypes = RMaterialProperty::getTypes(problemType);
+        QList<RMaterialProperty::Type> propertyTypes = RMaterialProperty::getRequiredTypes(problemType);
 
         QStringList propertyIds;
         for (RMaterialProperty::Type type : propertyTypes)

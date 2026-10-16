@@ -4077,6 +4077,100 @@ void RFileIO::writeBinary(RSaveFile &outFile, const RParticleSetup &particleSetu
 
 
 /*********************************************************************
+ *  RStressTransientType                                             *
+ *********************************************************************/
+
+void RFileIO::readAscii(RFile &inFile, RStressTransientType &stressTransientType)
+{
+    int iValue;
+    inFile.getTextStream() >> iValue;
+    if (inFile.getTextStream().status() != QTextStream::Ok)
+    {
+        throw RError(RError::Type::ReadFile,R_ERROR_REF, "Failed to read RStressTransientType value.");
+    }
+    stressTransientType = RStressTransientType(iValue);
+} /* RFileIO::readAscii */
+
+
+void RFileIO::readBinary(RFile &inFile, RStressTransientType &stressTransientType)
+{
+    inFile.read((char*)&stressTransientType,sizeof(RStressTransientType));
+    if (inFile.error() != RFile::NoError)
+    {
+        throw RError(RError::Type::ReadFile,R_ERROR_REF,"Failed to read RStressTransientType value.");
+    }
+} /* RFileIO::readBinary */
+
+
+void RFileIO::writeAscii(RSaveFile &outFile, const RStressTransientType &stressTransientType, bool addNewLine)
+{
+    if (!addNewLine)
+    {
+        outFile.getTextStream() << int(stressTransientType);
+    }
+    else
+    {
+        outFile.getTextStream() << int(stressTransientType) << RConstants::endl;
+    }
+    if (outFile.getTextStream().status() != QTextStream::Ok)
+    {
+        throw RError(RError::Type::WriteFile,R_ERROR_REF,"Failed to write RStressTransientType value.");
+    }
+} /* RFileIO::writeAscii */
+
+
+void RFileIO::writeBinary(RSaveFile &outFile, const RStressTransientType &stressTransientType)
+{
+    outFile.write((char*)&stressTransientType,sizeof(RStressTransientType));
+    if (outFile.error() != RFile::NoError)
+    {
+        throw RError(RError::Type::WriteFile,R_ERROR_REF,"Failed to write RStressTransientType value.");
+    }
+} /* RFileIO::writeBinary */
+
+
+/*********************************************************************
+ *  RStressSetup                                                     *
+ *********************************************************************/
+
+void RFileIO::readAscii(RFile &inFile, RStressSetup &stressSetup)
+{
+    RFileIO::readAscii(inFile,stressSetup.transientType);
+    RFileIO::readAscii(inFile,stressSetup.hhtAlpha);
+    RFileIO::readAscii(inFile,stressSetup.lumpedMass);
+}
+
+void RFileIO::readBinary(RFile &inFile, RStressSetup &stressSetup)
+{
+    RFileIO::readBinary(inFile,stressSetup.transientType);
+    RFileIO::readBinary(inFile,stressSetup.hhtAlpha);
+    RFileIO::readBinary(inFile,stressSetup.lumpedMass);
+}
+
+void RFileIO::writeAscii(RSaveFile &outFile, const RStressSetup &stressSetup, bool addNewLine)
+{
+    RFileIO::writeAscii(outFile,stressSetup.transientType,addNewLine);
+    if (!addNewLine)
+    {
+        RFileIO::writeAscii(outFile,' ',false);
+    }
+    RFileIO::writeAscii(outFile,stressSetup.hhtAlpha,addNewLine);
+    if (!addNewLine)
+    {
+        RFileIO::writeAscii(outFile,' ',false);
+    }
+    RFileIO::writeAscii(outFile,stressSetup.lumpedMass,addNewLine);
+}
+
+void RFileIO::writeBinary(RSaveFile &outFile, const RStressSetup &stressSetup)
+{
+    RFileIO::writeBinary(outFile,stressSetup.transientType);
+    RFileIO::writeBinary(outFile,stressSetup.hhtAlpha);
+    RFileIO::writeBinary(outFile,stressSetup.lumpedMass);
+}
+
+
+/*********************************************************************
  *  RTimeSolver                                                      *
  *********************************************************************/
 
@@ -4491,6 +4585,10 @@ void RFileIO::readAscii(RFile &inFile, RProblemSetup &problemSetup)
     {
         RFileIO::readAscii(inFile,problemSetup.particleSetup);
     }
+    if (inFile.getVersion() > RVersion(1,3,2))
+    {
+        RFileIO::readAscii(inFile,problemSetup.stressSetup);
+    }
 }
 
 void RFileIO::readBinary(RFile &inFile, RProblemSetup &problemSetup)
@@ -4509,6 +4607,10 @@ void RFileIO::readBinary(RFile &inFile, RProblemSetup &problemSetup)
     if (inFile.getVersion() > RVersion(1,3,1))
     {
         RFileIO::readBinary(inFile,problemSetup.particleSetup);
+    }
+    if (inFile.getVersion() > RVersion(1,3,2))
+    {
+        RFileIO::readBinary(inFile,problemSetup.stressSetup);
     }
 }
 
@@ -4540,6 +4642,11 @@ void RFileIO::writeAscii(RSaveFile &outFile, const RProblemSetup &problemSetup, 
         RFileIO::writeAscii(outFile,' ',false);
     }
     RFileIO::writeAscii(outFile,problemSetup.particleSetup,addNewLine);
+    if (!addNewLine)
+    {
+        RFileIO::writeAscii(outFile,' ',false);
+    }
+    RFileIO::writeAscii(outFile,problemSetup.stressSetup,addNewLine);
 }
 
 void RFileIO::writeBinary(RSaveFile &outFile, const RProblemSetup &problemSetup)
@@ -4550,6 +4657,7 @@ void RFileIO::writeBinary(RSaveFile &outFile, const RProblemSetup &problemSetup)
     RFileIO::writeBinary(outFile,problemSetup.meshSetup);
     RFileIO::writeBinary(outFile,problemSetup.acousticSetup);
     RFileIO::writeBinary(outFile,problemSetup.particleSetup);
+    RFileIO::writeBinary(outFile,problemSetup.stressSetup);
 }
 
 

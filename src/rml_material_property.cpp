@@ -29,6 +29,8 @@ const RMaterialPropertyDesc materialPropertyDesc [] =
     { "prop-modulus_of_elasticity",         R_VARIABLE_MODULUS_OF_ELASTICITY,         R_PROBLEM_ACOUSTICS | R_PROBLEM_STRESS | R_PROBLEM_STRESS_MODAL, R_PROBLEM_ACOUSTICS },
     { "prop-permeability_to_fluids",        R_VARIABLE_PERMEABILITY_TO_FLUIDS,        R_PROBLEM_POTENTIAL, R_PROBLEM_NONE },
     { "prop-poisson_ratio",                 R_VARIABLE_POISSON_RATIO,                 R_PROBLEM_STRESS | R_PROBLEM_STRESS_MODAL, R_PROBLEM_NONE },
+    { "prop-rayleigh_mass_damping",         R_VARIABLE_RAYLEIGH_MASS_DAMPING,         R_PROBLEM_STRESS, R_PROBLEM_STRESS },
+    { "prop-rayleigh_stiffness_damping",    R_VARIABLE_RAYLEIGH_STIFFNESS_DAMPING,    R_PROBLEM_STRESS, R_PROBLEM_STRESS },
     { "prop-relative_permittivity",         R_VARIABLE_RELATIVE_PERMITTIVITY,         R_PROBLEM_ELECTROSTATICS, R_PROBLEM_NONE },
     { "prop-soubd_speed",                   R_VARIABLE_SOUND_SPEED,                   R_PROBLEM_ACOUSTICS, R_PROBLEM_ACOUSTICS },
     { "prop-thermal_conductivity",          R_VARIABLE_THERMAL_CONDUCTIVITY,          R_PROBLEM_HEAT | R_PROBLEM_FLUID_HEAT, R_PROBLEM_NONE },

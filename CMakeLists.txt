@@ -58,6 +58,7 @@ qt_add_library(range-model-lib
         src/rml_shape_generator.cpp
         src/rml_sparse_matrix.cpp
         src/rml_stream_line.cpp
+        src/rml_stress_setup.cpp
         src/rml_surface.cpp
         src/rml_tetgen.cpp
         src/rml_tetrahedron.cpp
@@ -131,6 +132,7 @@ qt_add_library(range-model-lib
         include/rml_sparse_matrix.h
         include/rml_sparse_vector.h
         include/rml_stream_line.h
+        include/rml_stress_setup.h
         include/rml_surface.h
         include/rml_tetgen.h
         include/rml_tetrahedron.h
@@ -151,7 +153,7 @@ target_compile_definitions(range-model-lib
     PRIVATE
         FILE_MAJOR_VERSION=1
         FILE_MINOR_VERSION=3
-        FILE_RELEASE_VERSION=2
+        FILE_RELEASE_VERSION=3
         TETLIBRARY
 )
 

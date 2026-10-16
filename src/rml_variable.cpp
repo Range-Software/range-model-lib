@@ -105,6 +105,8 @@ const RVariableDesc variableDesc [R_VARIABLE_N_TYPES] =
     { "var-potential_acceleration"       , "Potential / s^2",                           "1/s^2",      0.0,     R_VARIABLE_DATA_DOUBLE,  R_PROBLEM_ACOUSTICS },
     { "var-radiation_emitter"            , "Radiation emitter",                         "N/A",        1.0,     R_VARIABLE_DATA_BOOLEAN, R_PROBLEM_NONE },
     { "var-radiation_receiver"           , "Radiation receiver",                        "N/A",        1.0,     R_VARIABLE_DATA_BOOLEAN, R_PROBLEM_NONE },
+    { "var-rayleigh_mass_damping"        , "Rayleigh mass damping coefficient",         "1/s",        0.0,     R_VARIABLE_DATA_DOUBLE,  R_PROBLEM_NONE },
+    { "var-rayleigh_stiffness_damping"   , "Rayleigh stiffness damping coefficient",    "s",          0.0,     R_VARIABLE_DATA_DOUBLE,  R_PROBLEM_NONE },
     { "var-relative_permittivity"        , "Relative permittivity",                     "N/A",        0.0,     R_VARIABLE_DATA_DOUBLE,  R_PROBLEM_NONE },
     { "var-relative_saturation"          , "Relative saturation",                       "N/A",        0.0,     R_VARIABLE_DATA_DOUBLE,  R_PROBLEM_FLUID_PARTICLE },
     { "var-separation_angle"             , "Separation angle",                          "Deg",        0.0,     R_VARIABLE_DATA_DOUBLE,  R_PROBLEM_NONE },
@@ -119,6 +121,11 @@ const RVariableDesc variableDesc [R_VARIABLE_N_TYPES] =
     { "var-stress_von_mises"             , "Von Mises stress",                          "Pa",         0.0,     R_VARIABLE_DATA_DOUBLE,  R_PROBLEM_STRESS | R_PROBLEM_STRESS_MODAL },
     { "var-stress_normal"                , "Normal stress",                             "Pa",         0.0,     R_VARIABLE_DATA_DOUBLE,  R_PROBLEM_STRESS | R_PROBLEM_STRESS_MODAL },
     { "var-stress_shear"                 , "Shear stress",                              "Pa",         0.0,     R_VARIABLE_DATA_DOUBLE,  R_PROBLEM_STRESS | R_PROBLEM_STRESS_MODAL },
+    { "var-structural_acceleration"      , "Structural acceleration",                   "m/s^2",      0.0,     R_VARIABLE_DATA_DOUBLE,  R_PROBLEM_STRESS },
+    { "var-structural_velocity"          , "Structural velocity",                       "m/s",        0.0,     R_VARIABLE_DATA_DOUBLE,  R_PROBLEM_STRESS },
+    { "var-structural_velocity_x"        , "Structural velocity in X direction",        "m/s",        0.0,     R_VARIABLE_DATA_DOUBLE,  R_PROBLEM_NONE },
+    { "var-structural_velocity_y"        , "Structural velocity in Y direction",        "m/s",        0.0,     R_VARIABLE_DATA_DOUBLE,  R_PROBLEM_NONE },
+    { "var-structural_velocity_z"        , "Structural velocity in Z direction",        "m/s",        0.0,     R_VARIABLE_DATA_DOUBLE,  R_PROBLEM_NONE },
     { "var-temperature"                  , "Temperature",                               "K",          293.15,  R_VARIABLE_DATA_DOUBLE,  R_PROBLEM_HEAT | R_PROBLEM_FLUID },
     { "var-thermal_conductivity"         , "Thermal conductivity",                      "W/(m*K)",    0.0,     R_VARIABLE_DATA_DOUBLE,  R_PROBLEM_NONE },
     { "var-thermal_expansion_coefficient", "Thermal expansion coefficient",             "1/K",        0.0,     R_VARIABLE_DATA_DOUBLE,  R_PROBLEM_NONE },
@@ -666,6 +673,13 @@ const QString RVariable::guessVectorName(RVariableType type1,
        return RVariable::getName(R_VARIABLE_STRESS_SHEAR);
    }
    else if (RVariable::checkVectorTypes(type1,type2,type3,
+                                        R_VARIABLE_STRUCTURAL_VELOCITY_X,
+                                        R_VARIABLE_STRUCTURAL_VELOCITY_Y,
+                                        R_VARIABLE_STRUCTURAL_VELOCITY_Z))
+   {
+       return RVariable::getName(R_VARIABLE_STRUCTURAL_VELOCITY);
+   }
+   else if (RVariable::checkVectorTypes(type1,type2,type3,
                                         R_VARIABLE_VELOCITY_X,
                                         R_VARIABLE_VELOCITY_Y,
                                         R_VARIABLE_VELOCITY_Z))
@@ -769,6 +783,13 @@ const QString RVariable::guessVectorUnits(RVariableType type1,
                                         R_VARIABLE_STRESS_YZ))
    {
        return RVariable::getUnits(R_VARIABLE_STRESS_SHEAR);
+   }
+   else if (RVariable::checkVectorTypes(type1,type2,type3,
+                                        R_VARIABLE_STRUCTURAL_VELOCITY_X,
+                                        R_VARIABLE_STRUCTURAL_VELOCITY_Y,
+                                        R_VARIABLE_STRUCTURAL_VELOCITY_Z))
+   {
+       return RVariable::getUnits(R_VARIABLE_STRUCTURAL_VELOCITY);
    }
    else if (RVariable::checkVectorTypes(type1,type2,type3,
                                         R_VARIABLE_VELOCITY_X,

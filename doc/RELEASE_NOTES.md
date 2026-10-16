@@ -14,6 +14,10 @@
 - **RParticleSetup** new class, part of **RProblemSetup**, holding the
   contaminant *maximum saturation* `[kg/m^3]`; zero (default) means unlimited,
   and *diffusion coefficient* `[m^2/s]`; zero (default) means no diffusion
+- **RStressSetup** new class, part of **RProblemSetup**, holding the transient
+  stress analysis type (*Dynamic*, the default, or *Quasi-static*), the
+  Hilber-Hughes-Taylor alpha (`-1/3` to `0`, default `0`) and the lumped mass
+  flag (default off)
 - **RProblem** acoustics is back in `R_PROBLEM_ALL`, so the application offers it
 - **REigenValueSolverConf** methods `Arnoldi` and `Rayleigh` renamed to
   `SubspaceIteration` and `InversePowerIteration` to match the algorithms used
@@ -32,6 +36,11 @@
   (`getOptionalProblemTypeMask()`); `getRequiredTypes()` returns only those a
   solver truly needs, so acoustics accepts either speed of sound or modulus of
   elasticity
+- **RMaterialProperty** added *Rayleigh mass damping coefficient* `[1/s]` and
+  *Rayleigh stiffness damping coefficient* `[s]`, optional for stress analysis
+- **RMaterial::validForProblemType()** and the material file specification
+  list only the required properties (`getRequiredTypes()`), so a material is no
+  longer reported invalid for missing an optional one
 
 #### Boundary and initial conditions
 
@@ -60,6 +69,9 @@
   acoustic pressure of a transient analysis
 - **RInitialCondition** *Velocity* no longer offered for stress problems (never
   read by the stress solver)
+- **RInitialCondition** added *Structural velocity* (`ic-structural_velocity`,
+  components *Structural velocity in X/Y/Z direction*), the initial velocity of
+  a dynamic stress analysis
 
 #### Results and display
 
@@ -68,6 +80,9 @@
   potential
 - **RVariable** added *Relative saturation* (`N/A`), the contaminant
   concentration divided by the maximum saturation
+- **RVariable** added *Structural velocity* (with X/Y/Z components) and
+  *Structural acceleration*, results of a dynamic stress analysis, and the two
+  Rayleigh damping coefficients
 - **RVariable** individual stress components and *Force* are now results of
   stress analysis, not only modal analysis
 - **RModel::write()** numbers result records of a harmonic acoustic analysis by
@@ -132,6 +147,9 @@
   defaults for missing fields
 - Model file version raised to **1.3.2**. Files newer than 1.3.1 carry the
   particle setup; older files load with saturation unlimited
+- Model file version raised to **1.3.3**. Files newer than 1.3.2 carry the
+  stress setup; older files load with a dynamic transient analysis, no HHT
+  dissipation and consistent mass
 
 ---
 
