@@ -147,7 +147,7 @@
   defaults for missing fields
 - Model file version raised to **1.3.2**. Files newer than 1.3.1 carry the
   particle setup; older files load with saturation unlimited
-- Model file version raised to **1.3.3**. Files newer than 1.3.2 carry the
+- Model file version raised to **1.4.0**. Files newer than 1.3.2 carry the
   stress setup; older files load with a dynamic transient analysis, no HHT
   dissipation and consistent mass
 

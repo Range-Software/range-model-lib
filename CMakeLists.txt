@@ -152,8 +152,8 @@ qt_add_library(range-model-lib
 target_compile_definitions(range-model-lib
     PRIVATE
         FILE_MAJOR_VERSION=1
-        FILE_MINOR_VERSION=3
-        FILE_RELEASE_VERSION=3
+        FILE_MINOR_VERSION=4
+        FILE_RELEASE_VERSION=0
         TETLIBRARY
 )
 
