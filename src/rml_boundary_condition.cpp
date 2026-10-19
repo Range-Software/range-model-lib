@@ -44,7 +44,7 @@ const RBoundaryConditionDesc boundaryConditionDesc [] =
     { "bc-particle_rate", "Particle rate", false, false, true, true, true, true, false, R_PROBLEM_FLUID_PARTICLE },
     { "bc-pressure", "Pressure", false, false, false, false, true, false, false, R_PROBLEM_STRESS | R_PROBLEM_STRESS_MODAL },
     { "bc-pressure_explicit", "Pressure (explicit)", false, true, false, false, true, false, false, R_PROBLEM_FLUID | R_PROBLEM_POTENTIAL },
-    { "bc-pressure_implicit", "Pressure (implicit)", false, false, false, false, true, false, false, R_PROBLEM_FLUID | R_PROBLEM_POTENTIAL },
+    { "bc-pressure_implicit", "Pressure (implicit)", false, false, false, false, true, false, false, R_PROBLEM_FLUID },
     { "bc-radiation_boundary", "Radiation boundary", false, false, false, false, true, false, false, R_PROBLEM_RADIATIVE_HEAT },
     { "bc-temperature", "Temperature", false, true, true, true, true, true, false, R_PROBLEM_HEAT | R_PROBLEM_FLUID_HEAT },
     { "bc-velocity", "Velocity", false, false, true, true, true, false, false, R_PROBLEM_ACOUSTICS },

@@ -59,7 +59,6 @@ typedef enum _RProblemType
 typedef int RProblemTypeMask;
 
 /*
-- R_PROBLEM_POTENTIAL -> // NOT IMPLEMENTED (no solver constructed at all)
 - R_PROBLEM_WAVE -> // NOT WORKING (constructs RSolverWave anyway)
 */
 
@@ -75,6 +74,7 @@ typedef int RProblemTypeMask;
         R_PROBLEM_RADIATIVE_HEAT | \
         R_PROBLEM_STRESS | \
         R_PROBLEM_STRESS_MODAL | \
+        R_PROBLEM_POTENTIAL | \
         R_PROBLEM_MESH \
     )
 

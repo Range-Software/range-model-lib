@@ -19,6 +19,8 @@
   Hilber-Hughes-Taylor alpha (`-1/3` to `0`, default `0`) and the lumped mass
   flag (default off)
 - **RProblem** acoustics is back in `R_PROBLEM_ALL`, so the application offers it
+- **RProblem** *Flow through porous media* (`R_PROBLEM_POTENTIAL`) added to
+  `R_PROBLEM_ALL` now that range-solver-lib implements it
 - **REigenValueSolverConf** methods `Arnoldi` and `Rayleigh` renamed to
   `SubspaceIteration` and `InversePowerIteration` to match the algorithms used
 
@@ -41,6 +43,10 @@
 - **RMaterial::validForProblemType()** and the material file specification
   list only the required properties (`getRequiredTypes()`), so a material is no
   longer reported invalid for missing an optional one
+- **RMaterialProperty** *Dynamic viscosity* is required for flow through porous
+  media, next to *Permeability to fluids* and *Density* (Darcy's law needs the
+  viscosity of the pore fluid). A material with only a permeability and a
+  density is no longer valid for it
 
 #### Boundary and initial conditions
 
@@ -65,6 +71,9 @@
 - **RVariable** *Particle flux* units corrected from `kg/(m^3*s)` to
   `kg/(m^2*s)` (it was not used before); added *Mass transfer coefficient* and
   *Ambient particle concentration*
+- **RBoundaryCondition** *Pressure (implicit)* is no longer offered for flow
+  through porous media; it is a free surface pressure of the incompressible
+  flow solver with no meaning for Darcy flow
 - **RInitialCondition** added *Velocity potential / s*, setting the initial
   acoustic pressure of a transient analysis
 - **RInitialCondition** *Velocity* no longer offered for stress problems (never
@@ -85,6 +94,8 @@
   Rayleigh damping coefficients
 - **RVariable** individual stress components and *Force* are now results of
   stress analysis, not only modal analysis
+- **RVariable** *Pressure* and *Velocity* are also variables of flow through
+  porous media, so they can be selected for its monitoring points
 - **RModel::write()** numbers result records of a harmonic acoustic analysis by
   swept frequency
 - **REntityGroupData::findVariablesByDisplayType()** new, returning all
