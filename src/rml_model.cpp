@@ -216,6 +216,34 @@ RModel::RModel(const RModelStl &modelStl)
 } /* RModel::RModel copy - STL */
 
 
+RModel::RModel(const RModelStep &modelStep)
+{
+    this->_init();
+    this->setName(modelStep.getName());
+    this->setDescription(modelStep.getDescription());
+    this->setNNodes(modelStep.getNNodes());
+    for (uint i=0;i<this->getNNodes();i++)
+    {
+        this->setNode(i,modelStep.getNode(i));
+    }
+    this->setNElements(modelStep.getNElements());
+    for (uint i=0;i<this->getNElements();i++)
+    {
+        this->setElement(i,modelStep.getElement(i),false);
+        this->addElementToGroup(i,modelStep.getElementBody(i));
+    }
+    for (uint i=0;i<this->getNSurfaces();i++)
+    {
+        QString surfaceName = (i < modelStep.getNBodies()) ? modelStep.getBodyName(i) : QString();
+        if (surfaceName.isEmpty())
+        {
+            surfaceName = QString("Surface ") + QString::number(i+1);
+        }
+        this->getSurface(i).setName(surfaceName);
+    }
+} /* RModel::RModel copy - STEP */
+
+
 RModel::RModel(const RModelRaw &modelRaw, const QString &name, const QString &description)
 {
     this->_init();
@@ -814,6 +842,40 @@ void RModel::exportTo (RModelStl &modelStl) const
                                  this->getNode(rElement.getNodeId(2)),
                                  this->getNode(rElement.getNodeId(3)),
                                  false);
+        }
+    }
+} /* RModel::exportTo */
+
+
+void RModel::exportTo (RModelStep &modelStep) const
+{
+    modelStep.clear();
+    modelStep.setName(this->getName());
+    modelStep.setDescription(this->getDescription());
+
+    for (uint i=0;i<this->getNNodes();i++)
+    {
+        modelStep.addNode(this->getNode(i));
+    }
+
+    for (uint i=0;i<this->getNSurfaces();i++)
+    {
+        const RSurface &rSurface = this->getSurface(i);
+        uint bodyID = modelStep.addBody(rSurface.getName());
+        for (uint j=0;j<rSurface.size();j++)
+        {
+            const RElement &rElement = this->getElement(rSurface.get(j));
+            if (rElement.getType() == R_ELEMENT_TRI1 ||
+                rElement.getType() == R_ELEMENT_TRI2)
+            {
+                modelStep.addBodyTriangle(bodyID,rElement.getNodeId(0),rElement.getNodeId(1),rElement.getNodeId(2));
+            }
+            if (rElement.getType() == R_ELEMENT_QUAD1 ||
+                rElement.getType() == R_ELEMENT_QUAD2)
+            {
+                modelStep.addBodyTriangle(bodyID,rElement.getNodeId(0),rElement.getNodeId(1),rElement.getNodeId(2));
+                modelStep.addBodyTriangle(bodyID,rElement.getNodeId(0),rElement.getNodeId(2),rElement.getNodeId(3));
+            }
         }
     }
 } /* RModel::exportTo */

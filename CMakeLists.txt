@@ -5,6 +5,7 @@ qt_add_library(range-model-lib
         src/rml_boundary_condition.cpp
         src/rml_condition.cpp
         src/rml_condition_component.cpp
+        src/rml_constrained_delaunay.cpp
         src/rml_cut.cpp
         src/rml_eigen_value_solver_conf.cpp
         src/rml_element.cpp
@@ -37,6 +38,7 @@ qt_add_library(range-model-lib
         src/rml_model_data.cpp
         src/rml_model_msh.cpp
         src/rml_model_raw.cpp
+        src/rml_model_step.cpp
         src/rml_model_stl.cpp
         src/rml_monitoring_point.cpp
         src/rml_monitoring_point_manager.cpp
@@ -57,6 +59,9 @@ qt_add_library(range-model-lib
         src/rml_segment.cpp
         src/rml_shape_generator.cpp
         src/rml_sparse_matrix.cpp
+        src/rml_step_file.cpp
+        src/rml_step_geometry.cpp
+        src/rml_step_tessellator.cpp
         src/rml_stream_line.cpp
         src/rml_stress_setup.cpp
         src/rml_surface.cpp
@@ -77,6 +82,7 @@ qt_add_library(range-model-lib
         include/rml_boundary_condition.h
         include/rml_condition.h
         include/rml_condition_component.h
+        include/rml_constrained_delaunay.h
         include/rml_cut.h
         include/rml_eigen_value_solver_conf.h
         include/rml_element.h
@@ -109,6 +115,7 @@ qt_add_library(range-model-lib
         include/rml_model_data.h
         include/rml_model_msh.h
         include/rml_model_raw.h
+        include/rml_model_step.h
         include/rml_model_stl.h
         include/rml_monitoring_point.h
         include/rml_monitoring_point_manager.h
@@ -131,6 +138,9 @@ qt_add_library(range-model-lib
         include/rml_shape_generator.h
         include/rml_sparse_matrix.h
         include/rml_sparse_vector.h
+        include/rml_step_file.h
+        include/rml_step_geometry.h
+        include/rml_step_tessellator.h
         include/rml_stream_line.h
         include/rml_stress_setup.h
         include/rml_surface.h

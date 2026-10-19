@@ -23,6 +23,7 @@
 #include "rml_model_data.h"
 #include "rml_model_msh.h"
 #include "rml_model_stl.h"
+#include "rml_model_step.h"
 #include "rml_model_raw.h"
 #include "rml_view_factor_matrix.h"
 #include "rml_scalar_field.h"
@@ -110,6 +111,9 @@ class RModel : public RProblem, public RResults
         //! Convert constructor from STL model.
         RModel(const RModelStl &modelStl);
 
+        //! Convert constructor from STEP model - each body becomes one surface.
+        RModel(const RModelStep &modelStep);
+
         //! Destructor.
         virtual ~RModel ();
 
@@ -134,6 +138,9 @@ class RModel : public RProblem, public RResults
 
         //! Export model to STL model.
         void exportTo(RModelStl &modelStl) const;
+
+        //! Export model to STEP model - each surface becomes one body.
+        void exportTo(RModelStep &modelStep) const;
 
         //! Get model name.
         QString getName() const;

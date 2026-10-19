@@ -27,7 +27,8 @@
 
 **File I/O**
 - `RModel` serialises the complete problem (mesh + setup + results) to the native `.rml` binary format
-- Import: `.msh` (Gmsh), `.stl`, `.raw`
+- Import: `.msh` (Gmsh), `.stl`, `.raw`, `.step` / `.stp` (`RModelStep`, B-rep and tessellated geometry is triangulated)
+- Export: `.msh`, `.stl`, `.raw`, `.step` (planar faceted B-rep)
 - `RFileManager`, `RFileHeader`, `RSaveFile` — file versioning and format management
 
 ## Central class

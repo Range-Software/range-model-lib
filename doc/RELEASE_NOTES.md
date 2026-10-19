@@ -107,6 +107,21 @@
   display type to a variable the model actually holds
 - Class **RFileManager** changed to namespace **RFileUtils**
 
+#### Geometry exchange
+
+- **RModelStep** new class reading and writing STEP (ISO 10303-21) files.
+  Reading triangulates B-rep solids and shells (elementary, B-spline, extruded,
+  revolved and offset surfaces with trimming loops in parameter space),
+  faceted B-rep and AP242 tessellated geometry, follows assembly placements and
+  mapped items and converts lengths to meters. Each solid or shell becomes one
+  body. Writing stores each body as planar faceted B-rep - closed bodies as
+  manifold solids, open bodies as shell based surface models
+- **RModel** converts from **RModelStep** (one surface per body) and exports to
+  it (one body per surface)
+- **RStepFile** new ISO 10303-21 exchange structure parser, **RStepCurve** and
+  **RStepSurface** geometry, **RStepTessellator** face triangulation and
+  **RConstrainedDelaunay** planar constrained Delaunay triangulation
+
 ### Bug fixes
 
 - **RTimeSolver::harmonizeTimesWithInput()** restarting a transient run from a

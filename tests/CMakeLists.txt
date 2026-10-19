@@ -17,6 +17,7 @@ set(range_model_lib_tests
     tst_sparse_matrix
     tst_material
     tst_time_solver
+    tst_step
 )
 
 foreach(test_name IN LISTS range_model_lib_tests)
