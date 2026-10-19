@@ -424,8 +424,16 @@ REntityGroupType RElementGroup::getGroupType (RElementType elementType)
 } /* RElementGroup::getGroupType */
 
 
+std::vector<REnvironmentConditionType> RElementGroup::getDefaultEnvironmentConditionTypes()
+{
+    return { R_ENVIRONMENT_CONDITION_G_ACCELERATION, R_ENVIRONMENT_CONDITION_TEMPERATURE };
+} /* RElementGroup::getDefaultEnvironmentConditionTypes */
+
+
 void RElementGroup::setDefaultEnvironmentConditions(void)
 {
-    this->eConditions[R_ENVIRONMENT_CONDITION_G_ACCELERATION] = REnvironmentCondition(R_ENVIRONMENT_CONDITION_G_ACCELERATION);
-    this->eConditions[R_ENVIRONMENT_CONDITION_TEMPERATURE] = REnvironmentCondition(R_ENVIRONMENT_CONDITION_TEMPERATURE);
+    for (REnvironmentConditionType type : RElementGroup::getDefaultEnvironmentConditionTypes())
+    {
+        this->eConditions[type] = REnvironmentCondition(type);
+    }
 } /* RElementGroup::setDefaultEnvironmentConditions */

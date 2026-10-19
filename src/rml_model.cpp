@@ -887,9 +887,13 @@ void RModel::addElementToGroup (uint elementID,
 
 void RModel::setProblemTaskTree (const RProblemTaskItem &taskTree)
 {
+    RProblemTypeMask oldTypeMask = this->getProblemTaskTree().getProblemTypeMask();
+
     RProblem::setProblemTaskTree(taskTree);
 
     RProblemTypeMask typeMask = taskTree.getProblemTypeMask();
+    // Problems which were not part of the task tree before.
+    RProblemTypeMask addedTypeMask = typeMask & ~oldTypeMask;
     RProblemTypeMask conditionTypeMask;
     RElementGroup *pElementGroup = nullptr;
 
@@ -984,6 +988,18 @@ void RModel::setProblemTaskTree (const RProblemTaskItem &taskTree)
                 else
                 {
                     pos++;
+                }
+            }
+
+            // Restore default environment conditions needed by newly added
+            // problems - they may have been removed together with a problem
+            // which was dropped from the task tree before.
+            for (REnvironmentConditionType ecType : RElementGroup::getDefaultEnvironmentConditionTypes())
+            {
+                if ((REnvironmentCondition::getProblemTypeMask(ecType) & addedTypeMask) &&
+                    !pElementGroup->hasEnvironmentCondition(ecType))
+                {
+                    pElementGroup->addEnvironmentCondition(REnvironmentCondition(ecType));
                 }
             }
         }

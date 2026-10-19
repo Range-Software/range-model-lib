@@ -116,6 +116,9 @@ class RProblem
         //! Return list of possible result variable types for specific problem type mask.
         static std::vector<RVariableType> getVariableTypes(RProblemTypeMask typeMask);
 
+        //! Return list of result variable types computed and stored by solvers of given problem type mask.
+        static std::vector<RVariableType> getComputedVariableTypes(RProblemTypeMask typeMask);
+
         //! Sort list of problem types by dependency.
         static void sortTypesByDependency(std::vector<RProblemType> &problemTypes);
 

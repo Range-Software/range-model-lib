@@ -222,6 +222,9 @@ class RElementGroup : public REntityGroup
         //! Return element group type to which given element type belongs.
         static REntityGroupType getGroupType ( RElementType elementType );
 
+        //! Return environment condition types every new element group carries.
+        static std::vector<REnvironmentConditionType> getDefaultEnvironmentConditionTypes();
+
         //! Allow RFileIO to access private members.
         friend class RFileIO;
 

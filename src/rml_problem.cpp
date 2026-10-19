@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include <rbl_error.h>
 
 #include "rml_problem.h"
@@ -445,6 +447,59 @@ std::vector<RVariableType> RProblem::getVariableTypes(RProblemTypeMask typeMask)
 
     return variableTypes;
 } /* RProblemMask::getVariableTypes */
+
+std::vector<RVariableType> RProblem::getComputedVariableTypes(RProblemTypeMask typeMask)
+{
+    // Must follow what the solvers in range-solver-lib store.
+    static const struct
+    {
+        RProblemType type;
+        std::vector<RVariableType> variableTypes;
+    } computedVariables[] =
+    {
+        { R_PROBLEM_ACOUSTICS,      { R_VARIABLE_ACOUSTIC_INTENSITY, R_VARIABLE_ACOUSTIC_PARTICLE_VELOCITY, R_VARIABLE_ACOUSTIC_PHASE,
+                                      R_VARIABLE_ACOUSTIC_PRESSURE, R_VARIABLE_ACOUSTIC_SOUND_PRESSURE_LEVEL, R_VARIABLE_POTENTIAL,
+                                      R_VARIABLE_POTENTIAL_ACCELERATION, R_VARIABLE_POTENTIAL_IMAGINARY, R_VARIABLE_POTENTIAL_VELOCITY } },
+        { R_PROBLEM_FLUID_PARTICLE, { R_VARIABLE_PARTICLE_CONCENTRATION, R_VARIABLE_RELATIVE_SATURATION } },
+        { R_PROBLEM_ELECTROSTATICS, { R_VARIABLE_CURRENT_DENSITY, R_VARIABLE_ELECTRICAL_RESISTIVITY, R_VARIABLE_ELECTRIC_ENERGY,
+                                      R_VARIABLE_ELECTRIC_FIELD, R_VARIABLE_ELECTRIC_POTENTIAL, R_VARIABLE_JOULE_HEAT } },
+        { R_PROBLEM_MAGNETOSTATICS, { R_VARIABLE_MAGNETIC_FIELD } },
+        { R_PROBLEM_FLUID,          { R_VARIABLE_ACCELERATION, R_VARIABLE_PRESSURE, R_VARIABLE_VELOCITY } },
+        { R_PROBLEM_FLUID_HEAT,     { R_VARIABLE_HEAT_FLUX, R_VARIABLE_TEMPERATURE } },
+        { R_PROBLEM_HEAT,           { R_VARIABLE_HEAT_FLUX, R_VARIABLE_HEAT_TRANSFER_COEFFICIENT, R_VARIABLE_TEMPERATURE } },
+        { R_PROBLEM_RADIATIVE_HEAT, { R_VARIABLE_HEAT_RADIATION } },
+        { R_PROBLEM_STRESS,         { R_VARIABLE_DISPLACEMENT, R_VARIABLE_FORCE, R_VARIABLE_STRESS_VON_MISES,
+                                      R_VARIABLE_STRESS_X, R_VARIABLE_STRESS_Y, R_VARIABLE_STRESS_Z,
+                                      R_VARIABLE_STRESS_YZ, R_VARIABLE_STRESS_XZ, R_VARIABLE_STRESS_XY,
+                                      R_VARIABLE_STRESS_NORMAL, R_VARIABLE_STRESS_SHEAR,
+                                      R_VARIABLE_STRUCTURAL_VELOCITY, R_VARIABLE_STRUCTURAL_ACCELERATION } },
+        { R_PROBLEM_STRESS_MODAL,   { R_VARIABLE_DISPLACEMENT, R_VARIABLE_FORCE, R_VARIABLE_STRESS_VON_MISES,
+                                      R_VARIABLE_STRESS_X, R_VARIABLE_STRESS_Y, R_VARIABLE_STRESS_Z,
+                                      R_VARIABLE_STRESS_YZ, R_VARIABLE_STRESS_XZ, R_VARIABLE_STRESS_XY,
+                                      R_VARIABLE_STRESS_NORMAL, R_VARIABLE_STRESS_SHEAR } },
+        { R_PROBLEM_POTENTIAL,      { R_VARIABLE_PRESSURE, R_VARIABLE_VELOCITY } },
+        { R_PROBLEM_WAVE,           { R_VARIABLE_WAVE_DISPLACEMENT } }
+    };
+
+    std::vector<RVariableType> variableTypes;
+
+    for (const auto &entry : computedVariables)
+    {
+        if (!(typeMask & entry.type))
+        {
+            continue;
+        }
+        for (RVariableType variableType : entry.variableTypes)
+        {
+            if (std::find(variableTypes.begin(),variableTypes.end(),variableType) == variableTypes.end())
+            {
+                variableTypes.push_back(variableType);
+            }
+        }
+    }
+
+    return variableTypes;
+} /* RProblem::getComputedVariableTypes */
 
 void RProblem::sortTypesByDependency(std::vector<RProblemType> &problemTypes)
 {
