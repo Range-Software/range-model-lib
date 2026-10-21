@@ -290,7 +290,9 @@ class RModel : public RProblem, public RResults
         void setElement(uint position, const RElement &element, bool addToGroup = true);
 
         //! Remove element from model at given position.
-        void removeElement(uint position, bool removeGroups);
+        //! If removeUnusedNodes is set to true nodes which are no longer used
+        //! by any element are removed as well.
+        void removeElement(uint position, bool removeGroups, bool removeUnusedNodes = true);
 
         //! Remove list of elements.
         //! If closeHole is set to true resulting hole will be patched with new elements.

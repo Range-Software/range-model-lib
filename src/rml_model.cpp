@@ -1165,7 +1165,9 @@ void RModel::removeNode(uint position)
 
     for (std::vector<uint>::reverse_iterator rIterEps = eps.rbegin(); rIterEps != eps.rend(); ++rIterEps)
     {
-        this->removeElement(*rIterEps, true);
+        // Unused nodes must not be removed here - the node at position itself
+        // becomes unused with its last element and would be removed twice.
+        this->removeElement(*rIterEps, true, false);
     }
 
     // Remove node from nodes vector
@@ -1203,9 +1205,32 @@ void RModel::removeNodes(const QList<uint> &nodeIDs, bool closeHole)
         RLogger::info("Removing node #%u\n",sortedNodeIDs[i]);
 
         QList<uint> edgeNodeIds;
+        // Surfaces and normals of the removed elements - patch elements are
+        // added to the surface of the removed element with the closest normal.
+        QList<QPair<uint,RR3Vector>> removedSurfaceElements;
         if (closeHole)
         {
             edgeNodeIds = this->findNodeEdgeRing(sortedNodeIDs[i]);
+
+            std::vector<uint> elementPositions = this->findElementPositionsByNodeId(sortedNodeIDs[i]);
+            for (uint elementID : elementPositions)
+            {
+                if (!R_ELEMENT_TYPE_IS_SURFACE(this->getElement(elementID).getType()))
+                {
+                    continue;
+                }
+                for (uint j=0;j<this->getNSurfaces();j++)
+                {
+                    uint grpPosition;
+                    if (this->getSurface(j).findPosition(elementID,&grpPosition))
+                    {
+                        RR3Vector normal;
+                        this->getElement(elementID).findNormal(this->getNodes(),normal[0],normal[1],normal[2]);
+                        removedSurfaceElements.append(QPair<uint,RR3Vector>(j,normal));
+                        break;
+                    }
+                }
+            }
         }
 
         for (int j=0;j<edgeNodeIds.size();j++)
@@ -1236,7 +1261,25 @@ void RModel::removeNodes(const QList<uint> &nodeIDs, bool closeHole)
                     {
                         patchEelements[j].setNodeId(k,edgeNodeIds[int(patchEelements[j].getNodeId(k))]);
                     }
-                    this->addElement(patchEelements[j]);
+                    if (removedSurfaceElements.isEmpty())
+                    {
+                        this->addElement(patchEelements[j]);
+                        continue;
+                    }
+                    RR3Vector normal;
+                    patchEelements[j].findNormal(this->getNodes(),normal[0],normal[1],normal[2]);
+                    uint surfaceID = removedSurfaceElements.first().first;
+                    double minNormalAngle = RConstants::pi;
+                    for (const QPair<uint,RR3Vector> &removedSurfaceElement : std::as_const(removedSurfaceElements))
+                    {
+                        double angle = RR3Vector::angle(normal,removedSurfaceElement.second);
+                        if (angle < minNormalAngle)
+                        {
+                            minNormalAngle = angle;
+                            surfaceID = removedSurfaceElement.first;
+                        }
+                    }
+                    this->addElement(patchEelements[j],true,surfaceID);
                 }
             }
         }
@@ -1791,7 +1834,7 @@ void RModel::setElement (uint    position,
 } /* RModel::setElement */
 
 
-void RModel::removeElement(uint position, bool removeGroups)
+void RModel::removeElement(uint position, bool removeGroups, bool removeUnusedNodes)
 {
     R_ERROR_ASSERT (position < this->elements.size());
 
@@ -1920,7 +1963,7 @@ void RModel::removeElement(uint position, bool removeGroups)
 
     // Find which nodes should be removed.
     std::vector<uint> nodesToRemove;
-    for (uint i=0;i<this->getElement(position).size();i++)
+    for (uint i=0;removeUnusedNodes && i<this->getElement(position).size();i++)
     {
         uint nodeID = this->getElement(position).getNodeId(i);
         bool nodeIsUsed = false;

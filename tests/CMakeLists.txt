@@ -12,6 +12,7 @@ set(range_model_lib_tests
     tst_element
     tst_segment
     tst_triangle
+    tst_polygon
     tst_tetrahedron
     tst_sparse_vector
     tst_sparse_matrix

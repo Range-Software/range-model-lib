@@ -228,19 +228,30 @@ void RPolygon::computeNormal(void)
         return;
     }
 
-    for (uint i=0;i<this->nodes.size();i++)
+    // Newell's method - unlike summing normals at the corners it is not
+    // distorted by reflex corners and copes with nodes which are not coplanar.
+    for (uint i=0;i<this->getNNodes();i++)
     {
-        uint n1 = (i==0) ? this->getNNodes()-1 : i-1;
-        uint n2 = i;
-        uint n3 = (i==this->getNNodes()-1) ? 0 : i+1;
+        const RNode &a = this->nodes[i];
+        const RNode &b = this->nodes[(i+1) % this->getNNodes()];
 
-        RR3Vector n(RTriangle::computeNormal(this->nodes[n1],this->nodes[n2],this->nodes[n3],false));
-        this->normal[0] += n[0];
-        this->normal[1] += n[1];
-        this->normal[2] += n[2];
+        this->normal[0] += (a.getY() - b.getY()) * (a.getZ() + b.getZ());
+        this->normal[1] += (a.getZ() - b.getZ()) * (a.getX() + b.getX());
+        this->normal[2] += (a.getX() - b.getX()) * (a.getY() + b.getY());
     }
 
     this->normal.normalize();
+}
+
+double RPolygon::findOrientation(const RNode &a, const RNode &b, const RNode &c) const
+{
+    RR3Vector ab(b.getX()-a.getX(),b.getY()-a.getY(),b.getZ()-a.getZ());
+    RR3Vector ac(c.getX()-a.getX(),c.getY()-a.getY(),c.getZ()-a.getZ());
+
+    RR3Vector n;
+    RR3Vector::cross(ab,ac,n);
+
+    return RRVector::dot(n,this->normal);
 }
 
 uint RPolygon::findEarNode(void) const
@@ -254,8 +265,15 @@ uint RPolygon::findEarNode(void) const
         return 0;
     }
 
+    // Nodes of a hole in a curved surface are not coplanar, therefore all
+    // tests are done on the projection to the plane perpendicular to the
+    // polygon normal.
+
     uint earNode = RConstants::eod;
-    double earAngle = RConstants::pi;
+    double earQuality = -1.0;
+
+    uint convexNode = RConstants::eod;
+    double convexQuality = -1.0;
 
     for (uint i=0;i<this->getNNodes();i++)
     {
@@ -263,40 +281,62 @@ uint RPolygon::findEarNode(void) const
         uint n2 = i;
         uint n3 = (i==this->getNNodes()-1) ? 0 : i+1;
 
-        RR3Vector v12(this->nodes[n1].getX()-this->nodes[n2].getX(),
-                      this->nodes[n1].getY()-this->nodes[n2].getY(),
-                      this->nodes[n1].getZ()-this->nodes[n2].getZ());
+        const RNode &p1 = this->nodes[n1];
+        const RNode &p2 = this->nodes[n2];
+        const RNode &p3 = this->nodes[n3];
 
-        RR3Vector v23(this->nodes[n2].getX()-this->nodes[n3].getX(),
-                      this->nodes[n2].getY()-this->nodes[n3].getY(),
-                      this->nodes[n2].getZ()-this->nodes[n3].getZ());
-
-        RR3Vector vn;
-
-        RR3Vector::cross(v12,v23,vn);
-
-        if (RR3Vector::angle(vn,this->normal) < RConstants::pi / 2.0)
+        double orientation = this->findOrientation(p1,p2,p3);
+        if (orientation <= 0.0)
         {
+            // Reflex or degenerated corner.
+            continue;
+        }
 
-            RTriangle t(this->nodes[n1],this->nodes[n2],this->nodes[n3]);
-            for (uint j=0;j<this->getNNodes();j++)
+        // Quality of the triangle is its smallest angle.
+        RR3Vector v12(p2.getX()-p1.getX(),p2.getY()-p1.getY(),p2.getZ()-p1.getZ());
+        RR3Vector v23(p3.getX()-p2.getX(),p3.getY()-p2.getY(),p3.getZ()-p2.getZ());
+        RR3Vector v31(p1.getX()-p3.getX(),p1.getY()-p3.getY(),p1.getZ()-p3.getZ());
+        double a1 = RConstants::pi - RR3Vector::angle(v31,v12);
+        double a2 = RConstants::pi - RR3Vector::angle(v12,v23);
+        double a3 = RConstants::pi - RR3Vector::angle(v23,v31);
+        double quality = std::min(a1,std::min(a2,a3));
+
+        if (quality > convexQuality)
+        {
+            convexQuality = quality;
+            convexNode = n2;
+        }
+
+        // Triangle is an ear only if no other node lies inside it or on its edges.
+        double tolerance = 1.0e-10 * orientation;
+        bool isEar = true;
+        for (uint j=0;j<this->getNNodes() && isEar;j++)
+        {
+            if (j == n1 || j == n2 || j == n3)
             {
-                if (j == n1 || j == n2 || j == n3)
-                {
-                    continue;
-                }
-
-                if (!t.isPointInside(this->nodes[j].toVector(),false))
-                {
-                    double angle = RR3Vector::angle(v12,v23);
-                    if (angle < earAngle)
-                    {
-                        earAngle = angle;
-                        earNode = n2;
-                    }
-                }
+                continue;
+            }
+            const RNode &p = this->nodes[j];
+            if (this->findOrientation(p1,p2,p) >= -tolerance &&
+                this->findOrientation(p2,p3,p) >= -tolerance &&
+                this->findOrientation(p3,p1,p) >= -tolerance)
+            {
+                isEar = false;
             }
         }
+
+        if (isEar && quality > earQuality)
+        {
+            earQuality = quality;
+            earNode = n2;
+        }
+    }
+
+    if (earNode == RConstants::eod)
+    {
+        // Projection of the polygon is not simple (strongly warped hole).
+        // Rather than leaving the hole open clip the best convex corner.
+        earNode = (convexNode == RConstants::eod) ? 0 : convexNode;
     }
 
     return earNode;

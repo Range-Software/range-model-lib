@@ -70,7 +70,13 @@ class RPolygon
         //! Compute polygon normal.
         void computeNormal (void);
 
-        //! Find ear (sharpest triangle) node.
+        //! Return orientation of triangle a, b, c with respect to polygon normal
+        //! (positive if counter-clockwise when looking against the normal).
+        double findOrientation(const RNode &a, const RNode &b, const RNode &c) const;
+
+        //! Find ear node - middle node of a convex corner whose triangle does not
+        //! contain any other node. Of all ears the one forming best shaped
+        //! triangle is returned.
         uint findEarNode(void) const;
 
 };
