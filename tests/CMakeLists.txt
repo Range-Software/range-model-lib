@@ -19,6 +19,7 @@ set(range_model_lib_tests
     tst_material
     tst_time_solver
     tst_step
+    tst_surface_normals
 )
 
 foreach(test_name IN LISTS range_model_lib_tests)

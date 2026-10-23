@@ -9,6 +9,8 @@
 #include <omp.h>
 #include <stack>
 #include <set>
+#include <map>
+#include <algorithm>
 #include <float.h>
 
 #include <rbl_error.h>
@@ -3515,6 +3517,220 @@ bool RModel::checkIfSurfacesAreClosed(const QList<uint> &surfaceIDs) const
 } /* RModel::checkIfSurfacesAreClosed */
 
 
+//! Check if two segments are collinear and overlap along a non-zero length.
+static bool segmentsOverlap(const RR3Vector &a1, const RR3Vector &a2, const RR3Vector &b1, const RR3Vector &b2)
+{
+    RR3Vector d;
+    RR3Vector::subtract(a2,a1,d);
+    double length = d.normalize();
+    if (length < RConstants::eps)
+    {
+        return false;
+    }
+    double tolerance = 1.0e-4 * length;
+
+    double t[2];
+    const RR3Vector *b[2] = {&b1,&b2};
+    for (uint i=0;i<2;i++)
+    {
+        RR3Vector v;
+        RR3Vector::subtract(*b[i],a1,v);
+        RR3Vector c;
+        RR3Vector::cross(v,d,c);
+        if (c.length() > tolerance)
+        {
+            return false;
+        }
+        t[i] = RR3Vector::dot(v,d);
+    }
+
+    double overlap = std::min(length,std::max(t[0],t[1])) - std::max(0.0,std::min(t[0],t[1]));
+    return (overlap > tolerance);
+}
+
+//! Triangle used for ray casting.
+struct RayTriangle
+{
+    RR3Vector v[3];
+    uint elementID;
+};
+
+//! Return number of corner nodes of surface element (0 if element is not a surface element).
+static uint findSurfaceElementCorners(const RElement &rElement)
+{
+    switch (rElement.getType())
+    {
+        case R_ELEMENT_TRI1:
+        case R_ELEMENT_TRI2:
+            return 3;
+        case R_ELEMENT_QUAD1:
+        case R_ELEMENT_QUAD2:
+            return 4;
+        default:
+            return 0;
+    }
+}
+
+//! Count number of triangles hit by a ray (Moller-Trumbore).
+//! Triangles belonging to excluded element are skipped.
+//! If stopAtFirst is true counting stops at first hit.
+static uint countRayHits(const RR3Vector &origin, const RR3Vector &direction, const std::vector<RayTriangle> &triangles, uint excludeElementID, bool stopAtFirst)
+{
+    uint nHits = 0;
+    for (const RayTriangle &triangle : triangles)
+    {
+        if (triangle.elementID == excludeElementID)
+        {
+            continue;
+        }
+        RR3Vector e1, e2, p, s, q;
+        RR3Vector::subtract(triangle.v[1],triangle.v[0],e1);
+        RR3Vector::subtract(triangle.v[2],triangle.v[0],e2);
+        RR3Vector::cross(direction,e2,p);
+        double det = RR3Vector::dot(e1,p);
+        if (std::fabs(det) < RConstants::eps * e1.length() * e2.length())
+        {
+            continue;
+        }
+        double invDet = 1.0 / det;
+        RR3Vector::subtract(origin,triangle.v[0],s);
+        double u = RR3Vector::dot(s,p) * invDet;
+        if (u < 0.0 || u > 1.0)
+        {
+            continue;
+        }
+        RR3Vector::cross(s,e1,q);
+        double v = RR3Vector::dot(direction,q) * invDet;
+        if (v < 0.0 || u + v > 1.0)
+        {
+            continue;
+        }
+        if (RR3Vector::dot(e2,q) * invDet > 0.0)
+        {
+            nHits++;
+            if (stopAtFirst)
+            {
+                break;
+            }
+        }
+    }
+    return nHits;
+}
+
+//! Determine orientation of a consistently oriented set of surface elements by casting rays from both sides of its elements.
+//! Side from which rays escape to infinity is outside. If no ray escapes, parity of the number of crossed elements is used.
+//! Returns 1 if normals point outwards, -1 if inwards and 0 if orientation could not be determined.
+static int findSurfaceOrientation(const std::vector<uint> &localIDs,
+                                  const RSurface &rSurface,
+                                  const std::vector<RNode> &nodes,
+                                  const std::vector<RElement> &elements,
+                                  const std::vector<RR3Vector> &normals,
+                                  const std::vector<bool> &hasNormal,
+                                  const std::vector<RayTriangle> &triangles)
+{
+    const uint maxSamples = 16;
+
+    // Sample largest elements.
+    std::vector<std::pair<double,uint>> candidates;
+    for (uint localID : localIDs)
+    {
+        if (!hasNormal[localID])
+        {
+            continue;
+        }
+        const RElement &rElement = elements[rSurface.get(localID)];
+        double area = 0.0;
+        uint nCorners = findSurfaceElementCorners(rElement);
+        for (uint k=1;k+1<nCorners;k++)
+        {
+            area += RTriangle::computeNormal(nodes[rElement.getNodeId(0)],nodes[rElement.getNodeId(k)],nodes[rElement.getNodeId(k+1)],false).length() / 2.0;
+        }
+        candidates.push_back(std::make_pair(area,localID));
+    }
+    std::sort(candidates.begin(),candidates.end(),[](const std::pair<double,uint> &a, const std::pair<double,uint> &b) { return a.first > b.first; });
+    if (candidates.size() > maxSamples)
+    {
+        candidates.resize(maxSamples);
+    }
+
+    double escapeVotes = 0.0;
+    double parityVotes = 0.0;
+
+    for (const std::pair<double,uint> &candidate : candidates)
+    {
+        uint localID = candidate.second;
+        uint elementID = rSurface.get(localID);
+        const RElement &rElement = elements[elementID];
+        const RR3Vector &normal = normals[localID];
+
+        // Element center and size.
+        uint nCorners = findSurfaceElementCorners(rElement);
+        RR3Vector center(0.0,0.0,0.0);
+        for (uint k=0;k<nCorners;k++)
+        {
+            const RNode &rNode = nodes[rElement.getNodeId(k)];
+            center[0] += rNode.getX() / double(nCorners);
+            center[1] += rNode.getY() / double(nCorners);
+            center[2] += rNode.getZ() / double(nCorners);
+        }
+        double offset = 1.0e-6 * std::sqrt(candidate.first);
+
+        RR3Vector u = normal.findOrthogonal();
+        u.normalize();
+        RR3Vector v;
+        RR3Vector::cross(normal,u,v);
+        v.normalize();
+
+        bool escapes[2] = {false,false};
+        uint nParityHits[2] = {0,0};
+        for (uint side=0;side<2;side++)
+        {
+            double sign = (side == 0) ? 1.0 : -1.0;
+            RR3Vector origin(center[0] + sign * offset * normal[0],
+                             center[1] + sign * offset * normal[1],
+                             center[2] + sign * offset * normal[2]);
+
+            // Directions in the hemisphere of the given side.
+            const double tilts[5][2] = {{0.0,0.0},{0.5,0.0},{-0.5,0.0},{0.0,0.5},{0.0,-0.5}};
+            for (uint k=0;k<5 && !escapes[side];k++)
+            {
+                RR3Vector direction(sign * normal[0] + tilts[k][0] * u[0] + tilts[k][1] * v[0],
+                                    sign * normal[1] + tilts[k][0] * u[1] + tilts[k][1] * v[1],
+                                    sign * normal[2] + tilts[k][0] * u[2] + tilts[k][1] * v[2]);
+                direction.normalize();
+                escapes[side] = (countRayHits(origin,direction,triangles,elementID,true) == 0);
+            }
+
+            // Slightly skewed direction lowers the chance of hitting element edges.
+            RR3Vector direction(sign * normal[0] + 0.1234 * u[0] + 0.0567 * v[0],
+                                sign * normal[1] + 0.1234 * u[1] + 0.0567 * v[1],
+                                sign * normal[2] + 0.1234 * u[2] + 0.0567 * v[2]);
+            direction.normalize();
+            nParityHits[side] = countRayHits(origin,direction,triangles,elementID,false);
+        }
+
+        if (escapes[0] != escapes[1])
+        {
+            escapeVotes += escapes[0] ? candidate.first : -candidate.first;
+        }
+        bool outside[2] = {nParityHits[0] % 2 == 0, nParityHits[1] % 2 == 0};
+        if (outside[0] != outside[1])
+        {
+            parityVotes += outside[0] ? candidate.first : -candidate.first;
+        }
+    }
+
+    if (escapeVotes != 0.0)
+    {
+        return (escapeVotes > 0.0) ? 1 : -1;
+    }
+    if (parityVotes != 0.0)
+    {
+        return (parityVotes > 0.0) ? 1 : -1;
+    }
+    return 0;
+}
+
 void RModel::syncSurfaceNormals()
 {
     if (this->getNElements() != this->surfaceNeigs.size())
@@ -3522,55 +3738,336 @@ void RModel::syncSurfaceNormals()
         this->setSurfaceNeighbors(this->findSurfaceNeighbors());
     }
 
+    // Maximum value of (1 - |cos(angle)|) between normals of coplanar elements.
+    const double coplanarTolerance = 1.0e-4;
+
+    auto edgeKey = [](uint n1, uint n2) -> std::pair<uint,uint>
+    {
+        return (n1 < n2) ? std::make_pair(n1,n2) : std::make_pair(n2,n1);
+    };
+
+    std::vector<uint> localIDs(this->getNElements(),RConstants::eod);
+
+    // Triangles of all surface elements used for ray casting.
+    std::vector<RayTriangle> rayTriangles;
+    for (uint i=0;i<this->getNElements();i++)
+    {
+        const RElement &rElement = this->getElement(i);
+        uint nCorners = findSurfaceElementCorners(rElement);
+        for (uint k=1;k+1<nCorners;k++)
+        {
+            rayTriangles.push_back({{this->nodes[rElement.getNodeId(0)].toVector(),
+                                     this->nodes[rElement.getNodeId(k)].toVector(),
+                                     this->nodes[rElement.getNodeId(k+1)].toVector()},i});
+        }
+    }
+
     uint nSwapped = 0;
     for (uint i=0;i<this->getNSurfaces();i++)
     {
-        RBVector elementSurface(this->getNElements(),false);
-        RBVector elementChecked(this->getNElements(),false);
-
         const RSurface &rSurface = this->getSurface(i);
+        uint nSurfaceElements = rSurface.size();
 
-        for (uint j=0;j<rSurface.size();j++)
+        for (uint j=0;j<nSurfaceElements;j++)
         {
-            elementSurface[rSurface.get(j)] = true;
+            localIDs[rSurface.get(j)] = j;
         }
 
-        for (uint j=0;j<rSurface.size();j++)
+        // Element normals, edges and node to element map.
+        std::vector<RR3Vector> normals(nSurfaceElements);
+        std::vector<bool> hasNormal(nSurfaceElements,false);
+        std::vector<std::vector<RElement>> edges(nSurfaceElements);
+        std::map<std::pair<uint,uint>,uint> edgeBook;
+        std::map<uint,std::vector<uint>> nodeBook;
+        std::vector<bool> swapped(nSurfaceElements,false);
+
+        for (uint j=0;j<nSurfaceElements;j++)
         {
-            uint elementID = rSurface.get(j);
-            if (!elementChecked[elementID])
+            const RElement &rElement = this->getElement(rSurface.get(j));
+            double nx, ny, nz;
+            if (rElement.findNormal(this->nodes,nx,ny,nz))
             {
-                elementChecked[elementID] = true;
+                normals[j] = RR3Vector(nx,ny,nz);
+                hasNormal[j] = (normals[j].length() > 0.5);
+            }
+            edges[j] = rElement.generateEdgeElements();
+            for (const RElement &rEdge : edges[j])
+            {
+                edgeBook[edgeKey(rEdge.getNodeId(0),rEdge.getNodeId(1))]++;
+            }
+            for (uint k=0;k<rElement.size();k++)
+            {
+                nodeBook[rElement.getNodeId(k)].push_back(j);
+            }
+        }
 
-                std::stack<uint> elementStack;
-                elementStack.push(elementID);
+        auto swapElement = [&](uint localID)
+        {
+            this->getElement(rSurface.get(localID)).swapNormal();
+            normals[localID] = normals[localID].getOpposite();
+            swapped[localID] = !swapped[localID];
+        };
 
-                while (elementStack.size() > 0)
+        // Coplanar elements touch if they share a manifold edge or if their edges overlap (T-junction).
+        auto coplanarElementsTouch = [&](uint localID1, uint localID2) -> bool
+        {
+            for (const RElement &rEdge1 : edges[localID1])
+            {
+                for (const RElement &rEdge2 : edges[localID2])
                 {
-                    elementID = elementStack.top();
-                    for (uint k=0;k<this->surfaceNeigs[elementID].size();k++)
+                    std::pair<uint,uint> key1 = edgeKey(rEdge1.getNodeId(0),rEdge1.getNodeId(1));
+                    std::pair<uint,uint> key2 = edgeKey(rEdge2.getNodeId(0),rEdge2.getNodeId(1));
+                    if (key1 == key2)
                     {
-                        uint neighbourID = surfaceNeigs[elementID][k];
-                        if (elementSurface[neighbourID] &&!elementChecked[neighbourID])
+                        if (edgeBook[key1] == 2)
                         {
-                            // Check neighbor orientation.
-                            if (!this->getElement(elementID).isNeighborNormalSync(this->getElement(neighbourID)))
-                            {
-                                this->getElement(neighbourID).swapNormal();
-                                nSwapped++;
-                            }
-                            elementChecked[neighbourID] = true;
-                            elementStack.push(neighbourID);
-                            break;
+                            return true;
                         }
-
+                        continue;
                     }
-                    if (elementID == elementStack.top())
+                    if (segmentsOverlap(this->nodes[key1.first].toVector(),this->nodes[key1.second].toVector(),
+                                        this->nodes[key2.first].toVector(),this->nodes[key2.second].toVector()))
                     {
-                        elementStack.pop();
+                        return true;
                     }
                 }
             }
+            return false;
+        };
+
+        // Group touching coplanar elements into patches and give them the same normal orientation.
+        std::vector<uint> patchIDs(nSurfaceElements,RConstants::eod);
+        std::vector<std::vector<uint>> patches;
+
+        for (uint j=0;j<nSurfaceElements;j++)
+        {
+            if (patchIDs[j] != RConstants::eod)
+            {
+                continue;
+            }
+            uint patchID = uint(patches.size());
+            patches.push_back(std::vector<uint>());
+            patchIDs[j] = patchID;
+            patches[patchID].push_back(j);
+
+            std::stack<uint> elementStack;
+            elementStack.push(j);
+
+            while (!elementStack.empty())
+            {
+                uint localID = elementStack.top();
+                elementStack.pop();
+                if (!hasNormal[localID])
+                {
+                    continue;
+                }
+                const RElement &rElement = this->getElement(rSurface.get(localID));
+                for (uint k=0;k<rElement.size();k++)
+                {
+                    for (uint candidateID : nodeBook[rElement.getNodeId(k)])
+                    {
+                        if (patchIDs[candidateID] != RConstants::eod || !hasNormal[candidateID])
+                        {
+                            continue;
+                        }
+                        double cosAngle = RR3Vector::dot(normals[localID],normals[candidateID]);
+                        if (1.0 - std::fabs(cosAngle) > coplanarTolerance)
+                        {
+                            continue;
+                        }
+                        if (!coplanarElementsTouch(localID,candidateID))
+                        {
+                            continue;
+                        }
+                        if (cosAngle < 0.0)
+                        {
+                            swapElement(candidateID);
+                        }
+                        patchIDs[candidateID] = patchID;
+                        patches[patchID].push_back(candidateID);
+                        elementStack.push(candidateID);
+                    }
+                }
+            }
+        }
+
+        // Links between neighboring elements from different patches.
+        // Links over non-manifold edges (shared by more than two elements, e.g. internal faces of multi-body models)
+        // do not determine orientation reliably.
+        struct PatchLink
+        {
+            uint localID;
+            uint neighborLocalID;
+            bool isManifold;
+        };
+        std::vector<std::vector<PatchLink>> patchLinks(patches.size());
+        for (uint j=0;j<nSurfaceElements;j++)
+        {
+            uint elementID = rSurface.get(j);
+            for (uint neighborID : this->surfaceNeigs[elementID])
+            {
+                uint neighborLocalID = localIDs[neighborID];
+                if (neighborLocalID == RConstants::eod || patchIDs[neighborLocalID] == patchIDs[j])
+                {
+                    continue;
+                }
+                const RElement &rNeighbor = this->getElement(neighborID);
+                bool isManifold = true;
+                for (const RElement &rEdge : edges[j])
+                {
+                    if (rNeighbor.hasNodeId(rEdge.getNodeId(0)) && rNeighbor.hasNodeId(rEdge.getNodeId(1)))
+                    {
+                        isManifold = (edgeBook[edgeKey(rEdge.getNodeId(0),rEdge.getNodeId(1))] == 2);
+                        break;
+                    }
+                }
+                patchLinks[patchIDs[j]].push_back({j,neighborLocalID,isManifold});
+            }
+        }
+
+        auto swapPatch = [&](uint patchID)
+        {
+            for (uint localID : patches[patchID])
+            {
+                swapElement(localID);
+            }
+        };
+
+        auto isLinkSync = [&](const PatchLink &link) -> bool
+        {
+            return this->getElement(rSurface.get(link.localID)).isNeighborNormalSync(this->getElement(rSurface.get(link.neighborLocalID)));
+        };
+
+        // Synchronize patches connected over manifold edges into components.
+        std::vector<uint> componentIDs(patches.size(),RConstants::eod);
+        std::vector<std::vector<uint>> components;
+
+        for (uint j=0;j<patches.size();j++)
+        {
+            if (componentIDs[j] != RConstants::eod)
+            {
+                continue;
+            }
+            uint componentID = uint(components.size());
+            components.push_back(std::vector<uint>());
+            componentIDs[j] = componentID;
+            components[componentID].push_back(j);
+
+            std::stack<uint> patchStack;
+            patchStack.push(j);
+
+            while (!patchStack.empty())
+            {
+                uint patchID = patchStack.top();
+                patchStack.pop();
+                for (const PatchLink &link : patchLinks[patchID])
+                {
+                    uint neighborPatchID = patchIDs[link.neighborLocalID];
+                    if (!link.isManifold || componentIDs[neighborPatchID] != RConstants::eod)
+                    {
+                        continue;
+                    }
+                    if (!isLinkSync(link))
+                    {
+                        swapPatch(neighborPatchID);
+                    }
+                    componentIDs[neighborPatchID] = componentID;
+                    components[componentID].push_back(neighborPatchID);
+                    patchStack.push(neighborPatchID);
+                }
+            }
+        }
+
+        // Orient components so that normals point outwards.
+        std::vector<bool> componentOriented(components.size(),false);
+
+        for (uint j=0;j<components.size();j++)
+        {
+            std::vector<uint> componentElements;
+            for (uint patchID : components[j])
+            {
+                componentElements.insert(componentElements.end(),patches[patchID].begin(),patches[patchID].end());
+            }
+
+            int orientation = findSurfaceOrientation(componentElements,rSurface,this->nodes,this->elements,normals,hasNormal,rayTriangles);
+            if (orientation == 0)
+            {
+                continue;
+            }
+            if (orientation < 0)
+            {
+                for (uint patchID : components[j])
+                {
+                    swapPatch(patchID);
+                }
+            }
+            componentOriented[j] = true;
+        }
+
+        // Components which could not be oriented take orientation from neighbors over non-manifold edges.
+        // Oriented components are used as seeds first.
+        std::vector<bool> componentChecked(components.size(),false);
+        std::vector<uint> seedOrder;
+        for (uint j=0;j<components.size();j++)
+        {
+            if (componentOriented[j])
+            {
+                seedOrder.push_back(j);
+            }
+        }
+        for (uint j=0;j<components.size();j++)
+        {
+            if (!componentOriented[j])
+            {
+                seedOrder.push_back(j);
+            }
+        }
+
+        for (uint seedID : seedOrder)
+        {
+            if (componentChecked[seedID])
+            {
+                continue;
+            }
+            componentChecked[seedID] = true;
+
+            std::stack<uint> componentStack;
+            componentStack.push(seedID);
+
+            while (!componentStack.empty())
+            {
+                uint componentID = componentStack.top();
+                componentStack.pop();
+                for (uint patchID : components[componentID])
+                {
+                    for (const PatchLink &link : patchLinks[patchID])
+                    {
+                        uint neighborComponentID = componentIDs[patchIDs[link.neighborLocalID]];
+                        if (componentChecked[neighborComponentID] || componentOriented[neighborComponentID])
+                        {
+                            continue;
+                        }
+                        componentChecked[neighborComponentID] = true;
+                        if (!isLinkSync(link))
+                        {
+                            for (uint neighborPatchID : components[neighborComponentID])
+                            {
+                                swapPatch(neighborPatchID);
+                            }
+                        }
+                        componentStack.push(neighborComponentID);
+                    }
+                }
+            }
+        }
+
+        for (uint j=0;j<nSurfaceElements;j++)
+        {
+            if (swapped[j])
+            {
+                nSwapped++;
+            }
+            localIDs[rSurface.get(j)] = RConstants::eod;
         }
     }
     RLogger::info("Number of swapped elements = %u\n",nSwapped);
