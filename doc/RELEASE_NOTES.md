@@ -122,7 +122,33 @@
   **RStepSurface** geometry, **RStepTessellator** face triangulation and
   **RConstrainedDelaunay** planar constrained Delaunay triangulation
 
+#### Surface normals
+
+- **RModel::syncSurfaceNormals()** gives touching coplanar elements of a surface
+  the same orientation, including elements meeting at T-junctions where a node of
+  one element lies on an edge of another. Coplanar elements are grouped first and
+  groups are synchronized with each other over shared edges, preferring edges
+  shared by two elements over edges shared by more of them
+- Normals are oriented to point outwards. Parts of a surface connected over edges
+  shared by two elements are oriented by casting rays from both sides of their
+  largest elements - the side from which rays escape the model is outside, with
+  the parity of crossed elements used when no ray escapes. Parts which cannot be
+  oriented this way, such as internal faces shared by two bodies of a multi-body
+  model, take the orientation from their neighbors
+- Added a test
+
 ### Bug fixes
+
+- **RModel::removeNodes()** removed a second node: the removed node becomes unused
+  with its last element and was removed once more with the element.
+  **RModel::removeElement()** takes a new `removeUnusedNodes` argument (default
+  true) to keep unused nodes
+- Closing the hole left by a removed node left gaps or created overlapping
+  triangles. **RPolygon** computes its normal with Newell's method, robust to
+  reflex corners and to nodes which are not coplanar, and triangulates by cutting
+  ears - convex corners whose triangle contains no other node - choosing the best
+  shaped triangle first. Patch elements are added to the surface of the removed
+  element with the closest normal. Added a test
 
 - **RTimeSolver::harmonizeTimesWithInput()** restarting a transient run from a
   steady solution continued from the placeholder time of the steady model,
