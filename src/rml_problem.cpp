@@ -20,7 +20,7 @@ const RProblemDesc problemDesc [] =
     {
         "prb-acoustics",
         "Acoustics",
-        "Customized wave equation for solving acoustic problems.",
+        "Transient and harmonic (frequency domain) acoustic pressure, particle velocity, intensity and sound pressure level.",
         R_PROBLEM_ACOUSTICS,
         R_PROBLEM_NONE,
         R_PROBLEM_WAVE | R_PROBLEM_STRESS_MODAL,
@@ -29,7 +29,7 @@ const RProblemDesc problemDesc [] =
     {
         "prb-contaminant",
         "Contaminant dispersion",
-        "Calculate distribution of contaminant in the flow field.",
+        "Calculate distribution of \"contaminant\" in the flow field.",
         R_PROBLEM_FLUID_PARTICLE,
         R_PROBLEM_FLUID,
         R_PROBLEM_STRESS_MODAL,
@@ -65,7 +65,7 @@ const RProblemDesc problemDesc [] =
     {
         "prb-fluid-heat",
         "Heat transfer in fluids",
-        "Heat transfer in fluids.",
+        "Temperature distribution in flowing fluid.",
         R_PROBLEM_FLUID_HEAT,
         R_PROBLEM_FLUID,
         R_PROBLEM_STRESS_MODAL,
@@ -74,7 +74,7 @@ const RProblemDesc problemDesc [] =
     {
         "prb-heat",
         "Heat transfer",
-        "Steady-state and transient Heat-transfer.",
+        "Steady-state and transient temperature distribution and heat flow, with simple, forced and natural convection.",
         R_PROBLEM_HEAT,
         R_PROBLEM_NONE,
         R_PROBLEM_STRESS_MODAL,
@@ -83,7 +83,7 @@ const RProblemDesc problemDesc [] =
     {
         "prb-radiative_heat",
         "Radiative heat transfer",
-        "Steady-state and transient radiative heat-transfer.",
+        "Solve for heat transfer between several surfaces capable of emitting and/or receiving heat (hemicube view factors).",
         R_PROBLEM_RADIATIVE_HEAT,
         R_PROBLEM_HEAT,
         R_PROBLEM_STRESS_MODAL,
@@ -92,7 +92,7 @@ const RProblemDesc problemDesc [] =
     {
         "prb-stress",
         "Stress analysis",
-        "Stress and linear elasto-dynamics analysis including modal analysis.",
+        "Static stress and linear elasto-dynamics analysis, including thermal expansion and loads from fluid pressure.",
         R_PROBLEM_STRESS,
         R_PROBLEM_NONE,
         R_PROBLEM_NONE,
@@ -101,7 +101,7 @@ const RProblemDesc problemDesc [] =
     {
         "prb-stress-modal",
         "Modal analysis",
-        "Stress modal analysis.",
+        "Find structure's natural frequencies and their mode shapes.",
         R_PROBLEM_STRESS_MODAL,
         R_PROBLEM_NONE,
         R_PROBLEM_ACOUSTICS | R_PROBLEM_FLUID_PARTICLE | R_PROBLEM_ELECTROSTATICS | R_PROBLEM_MAGNETOSTATICS | R_PROBLEM_FLUID | R_PROBLEM_FLUID_HEAT | R_PROBLEM_HEAT | R_PROBLEM_RADIATIVE_HEAT | R_PROBLEM_POTENTIAL | R_PROBLEM_WAVE,
@@ -110,7 +110,7 @@ const RProblemDesc problemDesc [] =
     {
         "prb-potential",
         "Flow through porous media",
-        "Flow through porous media.",
+        "Calculate pressure and velocity of fluid flowing through permeable material.",
         R_PROBLEM_POTENTIAL,
         R_PROBLEM_NONE,
         R_PROBLEM_FLUID | R_PROBLEM_STRESS_MODAL,
