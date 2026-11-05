@@ -28,7 +28,8 @@ REntityGroupData::REntityGroupData() :
     drawEqualArrowLength(false),
     drawArrowFrom(true),
     colorByPatch(false),
-    colorByViewFactor(false)
+    colorByViewFactor(false),
+    drawBoundaryConditions(false)
 {
     int r = int(floor(255*double(rand())/double(RAND_MAX)));
     int g = int(floor(255*double(rand())/double(RAND_MAX)));
@@ -72,6 +73,7 @@ void REntityGroupData::_init(const REntityGroupData *pElementGroupData)
         this->drawArrowFrom = pElementGroupData->drawArrowFrom;
         this->colorByPatch = pElementGroupData->colorByPatch;
         this->colorByViewFactor = pElementGroupData->colorByViewFactor;
+        this->drawBoundaryConditions = pElementGroupData->drawBoundaryConditions;
         this->variableData = pElementGroupData->variableData;
     }
 }
@@ -210,6 +212,16 @@ bool REntityGroupData::getColorByViewFactor(void) const
 void REntityGroupData::setColorByViewFactor(bool colorByViewFactor)
 {
     this->colorByViewFactor = colorByViewFactor;
+}
+
+bool REntityGroupData::getDrawBoundaryConditions(void) const
+{
+    return this->drawBoundaryConditions;
+}
+
+void REntityGroupData::setDrawBoundaryConditions(bool drawBoundaryConditions)
+{
+    this->drawBoundaryConditions = drawBoundaryConditions;
 }
 
 const std::map<RVariableType,REntityGroupVariableDisplayTypeMask> &REntityGroupData::getVariableData(void) const

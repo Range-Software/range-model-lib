@@ -7982,6 +7982,64 @@ void RModel::writeLink(const QString &linkFileName, const QString &targetFileNam
 } /* RModel::writeLink */
 
 
+RVersion RModel::readFileVersion(const QString &fileName)
+{
+    // Limit number of followed links to protect against link cycles.
+    const uint maxLinks = 32;
+
+    QString targetFileName(fileName);
+
+    for (uint i=0;i<=maxLinks;i++)
+    {
+        if (targetFileName.isEmpty())
+        {
+            throw RError(RError::Type::InvalidFileName,R_ERROR_REF,"No file name was provided.");
+        }
+
+        QString ext = RFileUtils::getExtension(targetFileName);
+        bool binary = true;
+        if (ext == RModel::getDefaultFileExtension(false))
+        {
+            binary = false;
+        }
+        else if (ext != RModel::getDefaultFileExtension(true))
+        {
+            throw RError(RError::Type::InvalidFileName,R_ERROR_REF, "Unknown extension \"" + ext + "\".");
+        }
+
+        RFile modelFile(targetFileName,binary ? RFile::BINARY : RFile::ASCII);
+        if (!modelFile.open(binary ? QIODevice::ReadOnly : (QIODevice::ReadOnly | QIODevice::Text)))
+        {
+            throw RError(RError::Type::OpenFile,R_ERROR_REF,"Failed to open the file \'%s\'.",targetFileName.toUtf8().constData());
+        }
+
+        RFileHeader fileHeader;
+        if (binary)
+        {
+            RFileIO::readBinary(modelFile,fileHeader);
+        }
+        else
+        {
+            RFileIO::readAscii(modelFile,fileHeader);
+        }
+        modelFile.close();
+
+        if (fileHeader.getType() == R_FILE_TYPE_LINK)
+        {
+            targetFileName = RFileUtils::findLinkTargetFileName(targetFileName,fileHeader.getInformation());
+            continue;
+        }
+        if (fileHeader.getType() != R_FILE_TYPE_MODEL)
+        {
+            throw RError(RError::Type::InvalidFileFormat,R_ERROR_REF,"File type of the file \'" + targetFileName + "\' is not MODEL.");
+        }
+        return fileHeader.getVersion();
+    }
+
+    throw RError(RError::Type::InvalidFileFormat,R_ERROR_REF,"Too many links when resolving the file \'" + fileName + "\'.");
+} /* RModel::readFileVersion */
+
+
 QString RModel::readAscii(const QString &fileName)
 {
     if (fileName.isEmpty())
@@ -8017,6 +8075,14 @@ QString RModel::readAscii(const QString &fileName)
     RLogger::debug("File version: %s (target: %s)\n",
                    fileHeader.getVersion().toString().toUtf8().constData(),
                    RModel::version.toString().toUtf8().constData());
+
+    if (fileHeader.getVersion() > RModel::version)
+    {
+        RLogger::warning("File '%s' has a newer file format version (%s) than supported (%s). It may not be read correctly.\n",
+                         fileName.toUtf8().constData(),
+                         fileHeader.getVersion().toString().toUtf8().constData(),
+                         RModel::version.toString().toUtf8().constData());
+    }
 
     // Set file version
     modelFile.setVersion(fileHeader.getVersion());
@@ -8209,6 +8275,14 @@ QString RModel::readBinary(const QString &fileName)
     RLogger::debug("File version: %s (target: %s)\n",
                    fileHeader.getVersion().toString().toUtf8().constData(),
                    RModel::version.toString().toUtf8().constData());
+
+    if (fileHeader.getVersion() > RModel::version)
+    {
+        RLogger::warning("File '%s' has a newer file format version (%s) than supported (%s). It may not be read correctly.\n",
+                         fileName.toUtf8().constData(),
+                         fileHeader.getVersion().toString().toUtf8().constData(),
+                         RModel::version.toString().toUtf8().constData());
+    }
 
     // Set file version
     modelFile.setVersion(fileHeader.getVersion());

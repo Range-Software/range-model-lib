@@ -1,3 +1,31 @@
+## Version 1.3.0
+
+### Improvements
+
+- **REntityGroupData** added the *draw boundary conditions* display flag
+  (`getDrawBoundaryConditions()`, `setDrawBoundaryConditions()`, default off),
+  saved with the entity display properties
+- **RModel::readFileVersion()** new: returns the file format version of a model
+  file by reading only its header, following link files to the model they point
+  to (at most 32 links, so a link cycle is reported as an error)
+- **RModel** reading a model file whose file format version is newer than
+  supported logs a warning that the file may not be read correctly
+- Added unit tests `tst_entity_group_data` and `tst_model_file_version`
+
+### Known issues
+
+- Boolean values are read inverted from ASCII files (`.ram`), which can also make
+  the value that follows fail to read. Binary files (`.rbm`) are not affected
+
+### File format
+
+- Model file version raised to **1.5.0**. Files newer than 1.4.0 carry the
+  entity *draw boundary conditions* flag; older files load with it off. This is
+  a breaking change: software supporting file version 1.4.0 or older cannot
+  read 1.5.0 files correctly
+
+---
+
 ## Version 1.2.0
 
 ### Improvements

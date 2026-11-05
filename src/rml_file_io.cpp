@@ -2914,6 +2914,10 @@ void RFileIO::readAscii(RFile &inFile, REntityGroupData &elementGroupData)
         RFileIO::readAscii(inFile,variableDisplayType);
         elementGroupData.variableData[variableType] = variableDisplayType;
     }
+    if (inFile.getVersion() > RVersion(1,4,0))
+    {
+        RFileIO::readAscii(inFile,elementGroupData.drawBoundaryConditions);
+    }
 }
 
 
@@ -2945,6 +2949,10 @@ void RFileIO::readBinary(RFile &inFile, REntityGroupData &elementGroupData)
         RFileIO::readBinary(inFile,variableType);
         RFileIO::readBinary(inFile,variableDisplayType);
         elementGroupData.variableData[variableType] = variableDisplayType;
+    }
+    if (inFile.getVersion() > RVersion(1,4,0))
+    {
+        RFileIO::readBinary(inFile,elementGroupData.drawBoundaryConditions);
     }
 }
 
@@ -3049,6 +3057,11 @@ void RFileIO::writeAscii(RSaveFile &outFile, const REntityGroupData &elementGrou
             RFileIO::writeAscii(outFile,' ',false);
         }
     }
+    RFileIO::writeAscii(outFile,elementGroupData.drawBoundaryConditions,addNewLine);
+    if (!addNewLine)
+    {
+        RFileIO::writeAscii(outFile,' ',false);
+    }
 }
 
 
@@ -3076,6 +3089,7 @@ void RFileIO::writeBinary(RSaveFile &outFile, const REntityGroupData &elementGro
         RFileIO::writeBinary(outFile,RVariableType(iterator->first));
         RFileIO::writeBinary(outFile,REntityGroupVariableDisplayTypeMask(iterator->second));
     }
+    RFileIO::writeBinary(outFile,elementGroupData.drawBoundaryConditions);
 }
 
 

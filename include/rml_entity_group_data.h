@@ -56,6 +56,8 @@ class REntityGroupData
         bool colorByPatch;
         //! Color by view-factor.
         bool colorByViewFactor;
+        //! Display boundary condition symbols.
+        bool drawBoundaryConditions;
         //! Vector of results variables data
         std::map<RVariableType,REntityGroupVariableDisplayTypeMask> variableData;
 
@@ -150,6 +152,12 @@ class REntityGroupData
 
         //! Set whether the entity should be colored by view-factor.
         void setColorByViewFactor(bool colorByViewFactor);
+
+        //! Return information on whether the entity boundary condition symbols should be drawn.
+        bool getDrawBoundaryConditions(void) const;
+
+        //! Set whether the entity boundary condition symbols should be drawn.
+        void setDrawBoundaryConditions(bool drawBoundaryConditions);
 
         //! Return const reference to vector of results variable data.
         const std::map<RVariableType,REntityGroupVariableDisplayTypeMask> & getVariableData(void) const;

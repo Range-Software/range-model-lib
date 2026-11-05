@@ -20,6 +20,8 @@ set(range_model_lib_tests
     tst_time_solver
     tst_step
     tst_surface_normals
+    tst_entity_group_data
+    tst_model_file_version
 )
 
 foreach(test_name IN LISTS range_model_lib_tests)

@@ -939,6 +939,10 @@ class RModel : public RProblem, public RResults
         //! Write link file.
         static void writeLink(const QString &linkFileName, const QString &targetFileName);
 
+        //! Read file format version of the model file without loading the model.
+        //! Link files are followed to the model file they point to.
+        static RVersion readFileVersion(const QString &fileName);
+
     protected:
 
         //! Read from the ASCII file.
