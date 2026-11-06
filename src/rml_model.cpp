@@ -7773,6 +7773,260 @@ void RModel::convertElementToNodeVector(const RRVector &elementValues,
 } /* RModel::convertElementToNodeVector */
 
 
+RSmoothedVariable RModel::findSmoothedVariable(uint variablePosition) const
+{
+    const RVariable &rVariable = this->getVariable(variablePosition);
+    const uint nElements = this->getNElements();
+    const uint nNodes = this->getNNodes();
+
+    RSmoothedVariable smoothed;
+
+    // Corners keep element values until they are averaged.
+    smoothed.elementOffsets.resize(nElements+1,0);
+    for (uint i=0;i<nElements;i++)
+    {
+        smoothed.elementOffsets[i+1] = smoothed.elementOffsets[i] + this->getElement(i).size();
+    }
+    smoothed.values.resize(smoothed.elementOffsets[nElements],0.0);
+
+    for (uint i=0;i<nElements;i++)
+    {
+        const double value = rVariable.getValue(i);
+        std::fill(smoothed.values.begin()+smoothed.elementOffsets[i],smoothed.values.begin()+smoothed.elementOffsets[i+1],value);
+        smoothed.elementMinValue = (i == 0) ? value : std::min(smoothed.elementMinValue,value);
+        smoothed.elementMaxValue = (i == 0) ? value : std::max(smoothed.elementMaxValue,value);
+    }
+
+    // Stress invariants of volume elements are computed from averaged components.
+    const RVariableType variableType = rVariable.getType();
+    const RVariableType componentTypes[6] = { R_VARIABLE_STRESS_X,  R_VARIABLE_STRESS_Y,  R_VARIABLE_STRESS_Z,
+                                              R_VARIABLE_STRESS_YZ, R_VARIABLE_STRESS_XZ, R_VARIABLE_STRESS_XY };
+    const RVariable *pComponents[6] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
+    bool invariantFromComponents = (variableType == R_VARIABLE_STRESS_VON_MISES
+                                    || variableType == R_VARIABLE_STRESS_NORMAL
+                                    || variableType == R_VARIABLE_STRESS_SHEAR);
+    for (uint i=0;i<6 && invariantFromComponents;i++)
+    {
+        const uint position = this->findVariable(componentTypes[i]);
+        if (position == RConstants::eod
+            || this->getVariable(position).getApplyType() != R_VARIABLE_APPLY_ELEMENT
+            || this->getVariable(position).getNValues() != nElements)
+        {
+            invariantFromComponents = false;
+        }
+        else
+        {
+            pComponents[i] = &this->getVariable(position);
+        }
+    }
+
+    // Elements averaged with each other.
+    struct SmoothingGroup
+    {
+        RElementGroup const *pElementGroup = nullptr;
+        double size = 0.0;
+        std::vector<uint> elementIDs;
+    };
+    std::vector<SmoothingGroup> volumeGroups;
+    std::vector<SmoothingGroup> surfaceGroups;
+    std::vector<SmoothingGroup> lineGroups;
+
+    auto addElements = [](std::vector<SmoothingGroup> &groups, const RElementGroup &rElementGroup, double size)
+    {
+        SmoothingGroup *pGroup = nullptr;
+        for (SmoothingGroup &group : groups)
+        {
+            if (group.size == size && group.pElementGroup->getMaterial().propertiesEqual(rElementGroup.getMaterial()))
+            {
+                pGroup = &group;
+                break;
+            }
+        }
+        if (!pGroup)
+        {
+            groups.emplace_back();
+            pGroup = &groups.back();
+            pGroup->pElementGroup = &rElementGroup;
+            pGroup->size = size;
+        }
+        for (uint i=0;i<rElementGroup.size();i++)
+        {
+            pGroup->elementIDs.push_back(rElementGroup.get(i));
+        }
+    };
+
+    for (uint i=0;i<this->getNVolumes();i++)
+    {
+        addElements(volumeGroups,this->getVolume(i),0.0);
+    }
+
+    // Elements without own results take values from elements around them.
+    std::vector<uint> dependentElementIDs;
+
+    for (uint i=0;i<this->getNSurfaces();i++)
+    {
+        const RSurface &rSurface = this->getSurface(i);
+        if (rSurface.getThickness() > 0.0)
+        {
+            addElements(surfaceGroups,rSurface,rSurface.getThickness());
+        }
+        else
+        {
+            for (uint j=0;j<rSurface.size();j++)
+            {
+                dependentElementIDs.push_back(rSurface.get(j));
+            }
+        }
+    }
+    for (uint i=0;i<this->getNLines();i++)
+    {
+        const RLine &rLine = this->getLine(i);
+        if (rLine.getCrossArea() > 0.0)
+        {
+            addElements(lineGroups,rLine,rLine.getCrossArea());
+        }
+        else
+        {
+            for (uint j=0;j<rLine.size();j++)
+            {
+                dependentElementIDs.push_back(rLine.get(j));
+            }
+        }
+    }
+
+    // Accumulators are reset only for touched nodes, so that many groups do not cost more than one.
+    const uint nComponents = invariantFromComponents ? 6 : 1;
+    std::vector<double> nodeSum(size_t(nNodes)*nComponents,0.0);
+    std::vector<double> nodeWeight(nNodes,0.0);
+    std::vector<double> dependentSum(nNodes,0.0);
+    std::vector<double> dependentWeight(nNodes,0.0);
+    std::vector<uint> touchedNodeIDs;
+
+    bool firstValue = true;
+
+    auto smoothGroup = [&](const SmoothingGroup &group, bool useComponents)
+    {
+        for (uint elementID : group.elementIDs)
+        {
+            const RElement &rElement = this->getElement(elementID);
+
+            RR3Vector center;
+            rElement.findCenter(this->nodes,center[0],center[1],center[2]);
+
+            for (uint j=0;j<rElement.size();j++)
+            {
+                const uint nodeID = rElement.getNodeId(j);
+
+                double d = this->nodes[nodeID].getDistance(RNode(center));
+                d = (d < RConstants::eps) ? 1.0 / RConstants::eps : 1.0 / d;
+
+                if (nodeWeight[nodeID] == 0.0)
+                {
+                    touchedNodeIDs.push_back(nodeID);
+                }
+                nodeWeight[nodeID] += d;
+                if (useComponents)
+                {
+                    for (uint k=0;k<6;k++)
+                    {
+                        nodeSum[size_t(nodeID)*6+k] += d*pComponents[k]->getValue(elementID);
+                    }
+                }
+                else
+                {
+                    nodeSum[size_t(nodeID)*nComponents] += d*rVariable.getValue(elementID);
+                }
+            }
+        }
+
+        auto findNodeValue = [&](uint nodeID)
+        {
+            if (!useComponents)
+            {
+                return nodeSum[size_t(nodeID)*nComponents]/nodeWeight[nodeID];
+            }
+            double q[6];
+            for (uint k=0;k<6;k++)
+            {
+                q[k] = nodeSum[size_t(nodeID)*6+k]/nodeWeight[nodeID];
+            }
+            // Same definitions as in stress solver.
+            const double n2 = std::max(0.0,q[0]*q[0] + q[1]*q[1] + q[2]*q[2] - (q[0]*q[1] + q[1]*q[2] + q[2]*q[0]));
+            const double s2 = 3.0*(q[3]*q[3] + q[4]*q[4] + q[5]*q[5]);
+            if (variableType == R_VARIABLE_STRESS_NORMAL)
+            {
+                return std::sqrt(n2);
+            }
+            if (variableType == R_VARIABLE_STRESS_SHEAR)
+            {
+                return std::sqrt(s2);
+            }
+            return std::sqrt(n2 + s2);
+        };
+
+        for (uint elementID : group.elementIDs)
+        {
+            const RElement &rElement = this->getElement(elementID);
+            for (uint j=0;j<rElement.size();j++)
+            {
+                const double value = findNodeValue(rElement.getNodeId(j));
+                smoothed.values[smoothed.elementOffsets[elementID]+j] = value;
+                smoothed.minValue = firstValue ? value : std::min(smoothed.minValue,value);
+                smoothed.maxValue = firstValue ? value : std::max(smoothed.maxValue,value);
+                firstValue = false;
+            }
+        }
+
+        for (uint nodeID : touchedNodeIDs)
+        {
+            dependentSum[nodeID] += findNodeValue(nodeID)*nodeWeight[nodeID];
+            dependentWeight[nodeID] += nodeWeight[nodeID];
+            nodeWeight[nodeID] = 0.0;
+            for (uint k=0;k<nComponents;k++)
+            {
+                nodeSum[size_t(nodeID)*nComponents+k] = 0.0;
+            }
+        }
+        touchedNodeIDs.clear();
+    };
+
+    for (const SmoothingGroup &group : volumeGroups)
+    {
+        smoothGroup(group,invariantFromComponents);
+    }
+    // Stress components of surface and line elements are in local element frames.
+    for (const SmoothingGroup &group : surfaceGroups)
+    {
+        smoothGroup(group,false);
+    }
+    for (const SmoothingGroup &group : lineGroups)
+    {
+        smoothGroup(group,false);
+    }
+
+    for (uint elementID : dependentElementIDs)
+    {
+        const RElement &rElement = this->getElement(elementID);
+        for (uint j=0;j<rElement.size();j++)
+        {
+            const uint nodeID = rElement.getNodeId(j);
+            if (dependentWeight[nodeID] > 0.0)
+            {
+                smoothed.values[smoothed.elementOffsets[elementID]+j] = dependentSum[nodeID]/dependentWeight[nodeID];
+            }
+        }
+    }
+
+    if (firstValue)
+    {
+        smoothed.minValue = smoothed.elementMinValue;
+        smoothed.maxValue = smoothed.elementMaxValue;
+    }
+
+    return smoothed;
+} /* RModel::findSmoothedVariable */
+
+
 void RModel::convertNodeToElementVector(const RRVector &nodeValues,
                                         RRVector &elementValues) const
 {

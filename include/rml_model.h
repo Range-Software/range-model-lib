@@ -42,6 +42,28 @@ typedef enum _RModelProblemType
 typedef int RModelProblemTypeMask;
 
 
+//! Element variable averaged to element corners for display.
+struct RSmoothedVariable
+{
+    //! Position of the first corner value of each element, last item is number of all corner values.
+    std::vector<uint> elementOffsets;
+    //! Values at element corners.
+    std::vector<double> values;
+    //! Minimum and maximum of averaged values.
+    double minValue = 0.0;
+    double maxValue = 0.0;
+    //! Minimum and maximum of original element values.
+    double elementMinValue = 0.0;
+    double elementMaxValue = 0.0;
+
+    //! Return value at given corner of given element.
+    inline double getValue(uint elementID, uint cornerID) const
+    {
+        return this->values[this->elementOffsets[elementID] + cornerID];
+    }
+};
+
+
 //! Model class.
 class RModel : public RProblem, public RResults
 {
@@ -908,6 +930,14 @@ class RModel : public RProblem, public RResults
                                         const RBVector &setValues,
                                         RRVector &nodeValues,
                                         bool onlySetValues = false) const;
+
+        //! Average element variable to element corners for display.
+        //! Elements are averaged only with elements of the same kind and the same material
+        //! (and thickness or cross area), so that real jumps between them are preserved.
+        //! Von Mises, normal and shear stress of volume elements are computed from averaged
+        //! stress components instead of being averaged themselves.
+        //! Surfaces without thickness and lines without cross area take values from elements around them.
+        RSmoothedVariable findSmoothedVariable(uint variablePosition) const;
 
         //! Fill node vector to element vector values.
         void convertNodeToElementVector(const RRVector &nodeValues,

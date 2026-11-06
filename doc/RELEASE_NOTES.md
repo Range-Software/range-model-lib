@@ -10,7 +10,20 @@
   to (at most 32 links, so a link cycle is reported as an error)
 - **RModel** reading a model file whose file format version is newer than
   supported logs a warning that the file may not be read correctly
-- Added unit tests `tst_entity_group_data` and `tst_model_file_version`
+- **RModel::findSmoothedVariable()** new: averages an element variable at nodes
+  for display, returning **RSmoothedVariable** with a value for each element
+  corner, the smoothed range and the original element range. The model and its
+  results stay unchanged:
+  - elements are averaged only with elements of the same kind and with equal
+    material properties, and surfaces and lines also with equal thickness or
+    cross area, so values stay separate across these boundaries
+  - on volumes, von Mises, normal and shear stress are calculated from the
+    averaged stress components when all six exist. On surfaces and lines their
+    values are averaged directly, as components are in local element frames
+  - surfaces without thickness and lines without cross area take their values
+    from the elements around them
+- Added unit tests `tst_entity_group_data`, `tst_model_file_version` and
+  `tst_smoothed_variable`
 
 ### Known issues
 
