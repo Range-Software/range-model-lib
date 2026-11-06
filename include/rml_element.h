@@ -200,6 +200,13 @@ class RElement
                        const RNode &node,
                        RRVector &volumes) const;
 
+        //! Find distance from given node to the closest point of the element.
+        //! Ratios are set to weights of element nodes at that point.
+        //! Element types which are not supported return maximum double value and empty ratios.
+        double findClosestPoint( const std::vector <RNode> &nodes,
+                                 const RNode &node,
+                                 RRVector &ratios) const;
+
         //! Return interpolated value.
         //! Node values is a vector which size is equal to number of nodes in element.
         double interpolate( const std::vector <RNode> &nodes,

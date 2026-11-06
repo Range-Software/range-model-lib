@@ -13,6 +13,9 @@ private slots:
     void nodeIds();
     void hasNodeId();
     void names();
+    void interpolateLine();
+    void interpolateTriangle();
+    void interpolateTetrahedron();
 };
 
 void TestElement::nodeCountByType()
@@ -65,6 +68,74 @@ void TestElement::names()
 {
     QCOMPARE(RElement::getName(R_ELEMENT_POINT), QString("Point"));
     QCOMPARE(RElement::getName(R_ELEMENT_TRI1), QString("Triangle1"));
+}
+
+void TestElement::interpolateLine()
+{
+    const std::vector<RNode> nodes = {RNode(0.0,0.0,0.0),RNode(4.0,0.0,0.0)};
+
+    RElement element(R_ELEMENT_TRUSS1);
+    element.setNodeId(0,0);
+    element.setNodeId(1,1);
+
+    RRVector nodeValues(2);
+    nodeValues[0] = 10.0;
+    nodeValues[1] = 30.0;
+
+    QCOMPARE(element.interpolate(nodes,RNode(0.0,0.0,0.0),nodeValues),10.0);
+    QCOMPARE(element.interpolate(nodes,RNode(4.0,0.0,0.0),nodeValues),30.0);
+    QCOMPARE(element.interpolate(nodes,RNode(1.0,0.0,0.0),nodeValues),15.0);
+
+    // The same with distances found when looking for the element.
+    RRVector volumes;
+    const RNode node(1.0,0.0,0.0);
+    QVERIFY(element.isInside(nodes,node,volumes));
+    QCOMPARE(element.interpolate(nodes,node,nodeValues,volumes),15.0);
+}
+
+void TestElement::interpolateTriangle()
+{
+    const std::vector<RNode> nodes = {RNode(0.0,0.0,0.0),RNode(4.0,0.0,0.0),RNode(0.0,4.0,0.0)};
+
+    RElement element(R_ELEMENT_TRI1);
+    for (uint i=0;i<3;i++)
+    {
+        element.setNodeId(i,i);
+    }
+
+    RRVector nodeValues(3);
+    nodeValues[0] = 10.0;
+    nodeValues[1] = 30.0;
+    nodeValues[2] = 50.0;
+
+    for (uint i=0;i<3;i++)
+    {
+        QCOMPARE(element.interpolate(nodes,nodes[i],nodeValues),nodeValues[i]);
+    }
+    QCOMPARE(element.interpolate(nodes,RNode(1.0,1.0,0.0),nodeValues),25.0);
+}
+
+void TestElement::interpolateTetrahedron()
+{
+    const std::vector<RNode> nodes = {RNode(0.0,0.0,0.0),RNode(4.0,0.0,0.0),RNode(0.0,4.0,0.0),RNode(0.0,0.0,4.0)};
+
+    RElement element(R_ELEMENT_TETRA1);
+    for (uint i=0;i<4;i++)
+    {
+        element.setNodeId(i,i);
+    }
+
+    RRVector nodeValues(4);
+    nodeValues[0] = 10.0;
+    nodeValues[1] = 30.0;
+    nodeValues[2] = 50.0;
+    nodeValues[3] = 70.0;
+
+    for (uint i=0;i<4;i++)
+    {
+        QCOMPARE(element.interpolate(nodes,nodes[i],nodeValues),nodeValues[i]);
+    }
+    QCOMPARE(element.interpolate(nodes,RNode(1.0,1.0,1.0),nodeValues),40.0);
 }
 
 QTEST_APPLESS_MAIN(TestElement)

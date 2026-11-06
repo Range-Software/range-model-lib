@@ -23,6 +23,7 @@ set(range_model_lib_tests
     tst_entity_group_data
     tst_model_file_version
     tst_smoothed_variable
+    tst_mesh_keep_results
 )
 
 foreach(test_name IN LISTS range_model_lib_tests)

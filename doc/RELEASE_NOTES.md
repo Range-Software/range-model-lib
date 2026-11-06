@@ -22,8 +22,18 @@
     values are averaged directly, as components are in local element frames
   - surfaces without thickness and lines without cross area take their values
     from the elements around them
-- Added unit tests `tst_entity_group_data`, `tst_model_file_version` and
-  `tst_smoothed_variable`
+- **RElement::findClosestPoint()** new: returns the distance from a node to the
+  closest point of the element and the weights of element nodes at that point
+- **RMeshGenerator** fixed results kept when generating a mesh:
+  - a new node missing the old mesh by rounding, or outside of it, kept the value
+    of an unrelated node. It now takes values from the closest element
+  - new point, line and surface elements kept values of unrelated elements or
+    zero. They now take values from the same kind of old element
+  - each position is searched only once and not for every variable
+- **RElement::interpolate()** fixed swapped node weights on line elements, which
+  returned the value of the opposite node at each end of a line
+- Added unit tests `tst_entity_group_data`, `tst_model_file_version`,
+  `tst_smoothed_variable` and `tst_mesh_keep_results`
 
 ### Known issues
 

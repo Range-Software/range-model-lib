@@ -2,7 +2,10 @@
 
 #include <vector>
 #include <string>
+#include <algorithm>
+#include <array>
 #include <cmath>
+#include <limits>
 
 #include <rbl_error.h>
 #include <rbl_logger.h>
@@ -1081,6 +1084,161 @@ bool RElement::isInside(const std::vector<RNode> &nodes, const RNode &node, RRVe
 } /* RElement::isInside */
 
 
+namespace
+{
+    typedef std::array<double,3> Point3;
+
+    Point3 subtract(const Point3 &a, const Point3 &b)
+    {
+        return {a[0]-b[0],a[1]-b[1],a[2]-b[2]};
+    }
+
+    double dot(const Point3 &a, const Point3 &b)
+    {
+        return a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+    }
+
+    Point3 cross(const Point3 &a, const Point3 &b)
+    {
+        return {a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]};
+    }
+
+    double findDistance(const Point3 &p, const Point3 &a, const Point3 &b, const Point3 &c, double wa, double wb, double wc)
+    {
+        const Point3 closest = {wa*a[0]+wb*b[0]+wc*c[0],wa*a[1]+wb*b[1]+wc*c[1],wa*a[2]+wb*b[2]+wc*c[2]};
+        const Point3 d = subtract(p,closest);
+        return std::sqrt(dot(d,d));
+    }
+
+    //! Find distance to closest point of segment and weights of its ends.
+    double findClosestOnSegment(const Point3 &p, const Point3 &a, const Point3 &b, double &wa, double &wb)
+    {
+        const Point3 ab = subtract(b,a);
+        const double length2 = dot(ab,ab);
+        wb = (length2 > 0.0) ? std::clamp(dot(subtract(p,a),ab)/length2,0.0,1.0) : 0.0;
+        wa = 1.0 - wb;
+        return findDistance(p,a,b,a,wa,wb,0.0);
+    }
+
+    //! Find distance to closest point of triangle and weights of its corners.
+    double findClosestOnTriangle(const Point3 &p, const Point3 &a, const Point3 &b, const Point3 &c, double &wa, double &wb, double &wc)
+    {
+        const Point3 v0 = subtract(b,a);
+        const Point3 v1 = subtract(c,a);
+        const Point3 v2 = subtract(p,a);
+        const double d00 = dot(v0,v0);
+        const double d01 = dot(v0,v1);
+        const double d11 = dot(v1,v1);
+        const double d20 = dot(v2,v0);
+        const double d21 = dot(v2,v1);
+        const double denominator = d00*d11 - d01*d01;
+        if (denominator > 0.0)
+        {
+            wb = (d11*d20 - d01*d21)/denominator;
+            wc = (d00*d21 - d01*d20)/denominator;
+            wa = 1.0 - wb - wc;
+            if (wa >= 0.0 && wb >= 0.0 && wc >= 0.0)
+            {
+                return findDistance(p,a,b,c,wa,wb,wc);
+            }
+        }
+
+        // Closest point is on an edge.
+        double distance = std::numeric_limits<double>::max();
+        double w1 = 0.0, w2 = 0.0, d = 0.0;
+        d = findClosestOnSegment(p,a,b,w1,w2);
+        if (d < distance) { distance = d; wa = w1; wb = w2; wc = 0.0; }
+        d = findClosestOnSegment(p,b,c,w1,w2);
+        if (d < distance) { distance = d; wa = 0.0; wb = w1; wc = w2; }
+        d = findClosestOnSegment(p,c,a,w1,w2);
+        if (d < distance) { distance = d; wa = w2; wb = 0.0; wc = w1; }
+        return distance;
+    }
+}
+
+
+double RElement::findClosestPoint(const std::vector<RNode> &nodes, const RNode &node, RRVector &ratios) const
+{
+    const Point3 p = {node.getX(),node.getY(),node.getZ()};
+
+    std::array<Point3,4> n;
+    if (this->size() <= n.size())
+    {
+        for (uint i=0;i<this->size();i++)
+        {
+            const RNode &rNode = nodes[this->getNodeId(i)];
+            n[i] = {rNode.getX(),rNode.getY(),rNode.getZ()};
+        }
+    }
+
+    switch (this->getType())
+    {
+        case R_ELEMENT_POINT:
+        {
+            ratios.resize(1,1.0);
+            return findDistance(p,n[0],n[0],n[0],1.0,0.0,0.0);
+        }
+        case R_ELEMENT_TRUSS1:
+        {
+            ratios.resize(2,0.0);
+            return findClosestOnSegment(p,n[0],n[1],ratios[0],ratios[1]);
+        }
+        case R_ELEMENT_TRI1:
+        {
+            ratios.resize(3,0.0);
+            return findClosestOnTriangle(p,n[0],n[1],n[2],ratios[0],ratios[1],ratios[2]);
+        }
+        case R_ELEMENT_TETRA1:
+        {
+            ratios.resize(4,0.0);
+
+            const Point3 v1 = subtract(n[1],n[0]);
+            const Point3 v2 = subtract(n[2],n[0]);
+            const Point3 v3 = subtract(n[3],n[0]);
+            const Point3 vp = subtract(p,n[0]);
+            const double volume = dot(cross(v1,v2),v3);
+            if (volume != 0.0)
+            {
+                ratios[1] = dot(cross(vp,v2),v3)/volume;
+                ratios[2] = dot(cross(v1,vp),v3)/volume;
+                ratios[3] = dot(cross(v1,v2),vp)/volume;
+                ratios[0] = 1.0 - ratios[1] - ratios[2] - ratios[3];
+                if (ratios[0] >= 0.0 && ratios[1] >= 0.0 && ratios[2] >= 0.0 && ratios[3] >= 0.0)
+                {
+                    return 0.0;
+                }
+            }
+
+            // Closest point is on a face.
+            static const uint faces[4][3] = {{1,2,3},{0,2,3},{0,1,3},{0,1,2}};
+            double distance = std::numeric_limits<double>::max();
+            for (uint i=0;i<4;i++)
+            {
+                const uint *face = faces[i];
+                double wa = 0.0, wb = 0.0, wc = 0.0;
+                const double d = findClosestOnTriangle(p,n[face[0]],n[face[1]],n[face[2]],wa,wb,wc);
+                if (d < distance)
+                {
+                    distance = d;
+                    ratios.fill(0.0);
+                    ratios[face[0]] = wa;
+                    ratios[face[1]] = wb;
+                    ratios[face[2]] = wc;
+                }
+            }
+            return distance;
+        }
+        default:
+        {
+            break;
+        }
+    }
+
+    ratios.resize(0);
+    return std::numeric_limits<double>::max();
+} /* RElement::findClosestPoint */
+
+
 double RElement::interpolate(const std::vector<RNode> &nodes, const RNode &interpolatedNode, const RRVector &nodeValues) const
 {
     RRVector volumes;
@@ -1112,8 +1270,9 @@ double RElement::interpolate(const std::vector<RNode> &nodes,
             double bt = b1 + b2;
             if (bt != 0.0)
             {
-                ratios[0] = b1/bt;
-                ratios[1] = b2/bt;
+                // Weight of a node is the distance to the other node.
+                ratios[0] = b2/bt;
+                ratios[1] = b1/bt;
             }
             break;
         }
