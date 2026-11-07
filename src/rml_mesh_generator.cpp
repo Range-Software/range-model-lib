@@ -22,7 +22,8 @@ void RMeshGenerator::generate(const RMeshInput &meshInput, RModel &model)
 
     if (meshInput.getUseTetGenInputParams())
     {
-        parameters.append(meshInput.getTetGenInputParams());
+        // Lines are read back from output edges.
+        parameters.append((model.getNLines() > 0 ? "e" : "") + meshInput.getTetGenInputParams());
     }
     else
     {

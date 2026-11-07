@@ -15,6 +15,28 @@ RTetGen::RTetGen(const RModel &model)
     this->importModel(model,false);
 }
 
+//! First marker of an edge which belongs to a line.
+//! Marker -1 is what TetGen gives to segments it creates, and such segments it may remove.
+static const int firstLineEdgeMarker = -2;
+
+//! Find edge marker of a line.
+static int findLineEdgeMarker(uint lineID)
+{
+    return firstLineEdgeMarker - int(lineID);
+}
+
+//! Find line of an edge marker.
+static uint findEdgeMarkerLine(int edgeMarker)
+{
+    return uint(firstLineEdgeMarker - edgeMarker);
+}
+
+//! Return true if edge marker belongs to a line.
+static bool isLineEdgeMarker(int edgeMarker)
+{
+    return edgeMarker <= firstLineEdgeMarker;
+}
+
 void RTetGen::importModel(const RModel &model, bool reconstruct, const RRVector &nodeMeshSizeValues)
 {
     this->firstnumber = 0;
@@ -69,7 +91,9 @@ void RTetGen::importModel(const RModel &model, bool reconstruct, const RRVector 
         const RPoint &rPoint = model.getPoint(i);
         for (uint j=0;j<rPoint.size();j++)
         {
-            this->pointmarkerlist[model.getElement(rPoint.get(j)).getNodeId(0)] = -marker;
+            // TetGen copies node markers of input nodes to output and marks Steiner nodes
+            // with markers of their facets or segments, which are never positive.
+            this->pointmarkerlist[model.getElement(rPoint.get(j)).getNodeId(0)] = marker;
         }
     }
 
@@ -81,7 +105,7 @@ void RTetGen::importModel(const RModel &model, bool reconstruct, const RRVector 
         uint edgeNumber = 0;
         for (uint i=0;i<model.getNLines();i++)
         {
-            int marker = int(i)+1;
+            int marker = findLineEdgeMarker(i);
             const RLine &rLine = model.getLine(i);
             for (uint j=0;j<rLine.size();j++)
             {
@@ -89,7 +113,7 @@ void RTetGen::importModel(const RModel &model, bool reconstruct, const RRVector 
                 const RElement &rElement = model.getElement(elementID);
                 this->edgelist[2*edgeNumber+0] = int(rElement.getNodeId(0)) + this->firstnumber;
                 this->edgelist[2*edgeNumber+1] = int(rElement.getNodeId(1)) + this->firstnumber;
-                this->edgemarkerlist[edgeNumber] = -marker;
+                this->edgemarkerlist[edgeNumber] = marker;
                 edgeNumber++;
             }
         }
@@ -420,7 +444,7 @@ static std::vector<ResultsLocation> findElementLocations(const RTetGen &tetgen,
     {
         for (int i=0;i<tetgen.numberofedges;i++)
         {
-            if (tetgen.edgemarkerlist[i] > 0)
+            if (isLineEdgeMarker(tetgen.edgemarkerlist[i]))
             {
                 newElements.push_back({{tetgen.edgelist[2*i+0] - tetgen.firstnumber,
                                         tetgen.edgelist[2*i+1] - tetgen.firstnumber,0,0},2,R_ENTITY_GROUP_LINE});
@@ -483,7 +507,7 @@ void RTetGen::exportMesh(RModel &model, bool keepResults) const
     {
         for (int i=0;i<this->numberofedges;i++)
         {
-            if (this->edgemarkerlist[i] > 0)
+            if (isLineEdgeMarker(this->edgemarkerlist[i]))
             {
                 numberOfLineElements++;
             }
@@ -628,7 +652,7 @@ void RTetGen::exportMesh(RModel &model, bool keepResults) const
     {
         for (uint i=0;i<uint(this->numberofedges);i++)
         {
-            if (this->edgemarkerlist[i] > 0)
+            if (isLineEdgeMarker(this->edgemarkerlist[i]))
             {
                 RElement element(R_ELEMENT_TRUSS1);
 
@@ -638,7 +662,7 @@ void RTetGen::exportMesh(RModel &model, bool keepResults) const
 
                 model.setElement(nElements,element,false);
 
-                uint marker = uint(std::abs(this->edgemarkerlist[i])) - 1;
+                uint marker = findEdgeMarkerLine(this->edgemarkerlist[i]);
                 if (model.getNLines() < marker + 1)
                 {
                     model.setNLines(marker+1);

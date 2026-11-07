@@ -30,10 +30,13 @@
   - new point, line and surface elements kept values of unrelated elements or
     zero. They now take values from the same kind of old element
   - each position is searched only once and not for every variable
+- **RMeshGenerator** fixed points and lines lost when generating a mesh. Lines may
+  be split by the new mesh, and their elements on existing edges stay on them.
+  Nodes of points keep their position also when an existing volume mesh is refined
 - **RElement::interpolate()** fixed swapped node weights on line elements, which
   returned the value of the opposite node at each end of a line
 - Added unit tests `tst_entity_group_data`, `tst_model_file_version`,
-  `tst_smoothed_variable` and `tst_mesh_keep_results`
+  `tst_smoothed_variable`, `tst_mesh_keep_results` and `tst_mesh_points_lines`
 
 ### Known issues
 

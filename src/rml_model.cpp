@@ -7045,7 +7045,8 @@ QString RModel::generateMeshTetGenInputParams(const RMeshInput &meshInput) const
     {
         parameters += "V";
     }
-    if (meshInput.getOutputEdges())
+    // Lines are read back from output edges.
+    if (meshInput.getOutputEdges() || this->getNLines() > 0)
     {
         parameters += "e";
     }
