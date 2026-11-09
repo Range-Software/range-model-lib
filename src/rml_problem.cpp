@@ -408,6 +408,35 @@ RProblemTypeMask RProblem::getExcludedProblemTypeMask(RProblemTypeMask typeMask)
 } /* RProblemMask::getTimeSolverTypeMask */
 
 
+RProblemTypeMask RProblem::getSolveAfterProblemTypeMask(RProblemTypeMask typeMask)
+{
+    RProblemTypeMask afterTypeMask = R_PROBLEM_NONE;
+
+    if (typeMask & R_PROBLEM_HEAT)
+    {
+        // Joule heat and walls coupled to the fluid.
+        afterTypeMask |= R_PROBLEM_ELECTROSTATICS | R_PROBLEM_FLUID_HEAT;
+    }
+    if (typeMask & R_PROBLEM_STRESS)
+    {
+        // Thermal expansion and pressure loads.
+        afterTypeMask |= R_PROBLEM_FLUID | R_PROBLEM_FLUID_HEAT | R_PROBLEM_HEAT | R_PROBLEM_RADIATIVE_HEAT | R_PROBLEM_POTENTIAL;
+    }
+    if (typeMask & R_PROBLEM_STRESS_MODAL)
+    {
+        // Prestressed modal analysis.
+        afterTypeMask |= R_PROBLEM_STRESS;
+    }
+    if (typeMask & R_PROBLEM_MESH)
+    {
+        // Mesh is reconstructed from final results.
+        afterTypeMask |= (R_PROBLEM_ALL | R_PROBLEM_WAVE) & ~R_PROBLEM_MESH;
+    }
+
+    return afterTypeMask;
+} /* RProblemMask::getSolveAfterProblemTypeMask */
+
+
 std::vector<RProblemType> RProblem::getTypes(RProblemTypeMask typeMask)
 {
     R_ERROR_ASSERT (R_PROBLEM_TYPE_MASK_IS_VALID (typeMask));
@@ -503,33 +532,33 @@ std::vector<RVariableType> RProblem::getComputedVariableTypes(RProblemTypeMask t
 
 void RProblem::sortTypesByDependency(std::vector<RProblemType> &problemTypes)
 {
-    if (problemTypes.size() == 0)
-    {
-        return;
-    }
+    std::vector<RProblemType> remainingTypes(problemTypes);
+    std::vector<RProblemType> sortedTypes;
+    sortedTypes.reserve(problemTypes.size());
 
-    bool orderChanged = false;
-
-    do
+    while (!remainingTypes.empty())
     {
-        orderChanged = false;
-        for (uint i=0;i<problemTypes.size()-1;i++)
+        RProblemTypeMask remainingTypeMask = R_PROBLEM_NONE;
+        for (RProblemType problemType : remainingTypes)
         {
-            RProblemTypeMask requiredProblemTypes = RProblem::getRequiredProblemTypeMask(problemTypes[i]);
-            for (uint j=i+1;j<problemTypes.size();j++)
+            remainingTypeMask |= problemType;
+        }
+
+        // First problem type which does not wait for any other remaining one.
+        std::size_t next = 0;
+        for (std::size_t i=0;i<remainingTypes.size();i++)
+        {
+            RProblemTypeMask previousTypeMask = RProblem::getRequiredProblemTypeMask(remainingTypes[i]) | RProblem::getSolveAfterProblemTypeMask(remainingTypes[i]);
+            if ((previousTypeMask & remainingTypeMask & ~remainingTypes[i]) == R_PROBLEM_NONE)
             {
-                if (requiredProblemTypes &problemTypes[j])
-                {
-                    problemTypes.insert(problemTypes.begin()+i,problemTypes.at(j));
-                    problemTypes.erase(problemTypes.begin()+j+1);
-                    orderChanged = true;
-                    break;
-                }
-            }
-            if (orderChanged)
-            {
+                next = i;
                 break;
             }
         }
-    } while (orderChanged);
+
+        sortedTypes.push_back(remainingTypes[next]);
+        remainingTypes.erase(remainingTypes.begin()+std::ptrdiff_t(next));
+    }
+
+    problemTypes = sortedTypes;
 } /* RProblemMask::sortTypesByDependency */

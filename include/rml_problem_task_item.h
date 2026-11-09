@@ -90,8 +90,19 @@ class RProblemTaskItem
         //! Print task tree.
         void print(bool printTitle = true) const;
 
+        //! Return true if this is a default layout of a task tree: a single group of tasks
+        //! in solve order, repeated only when given problem types need iterations.
+        bool hasDefaultLayout(void) const;
+
+        //! Return true if given problem types have to be solved iteratively.
+        static bool getNeedsIterations(RProblemTypeMask problemTypeMask);
+
+        //! Return default number of iterations for given problem types.
+        //! If transient is true the number is per time step.
+        static unsigned int getDefaultNIterations(RProblemTypeMask problemTypeMask, bool transient);
+
         //! Generate default problem tree from given problem type mask.
-        static RProblemTaskItem generateDefaultTree(RProblemTypeMask problemTypeMask);
+        static RProblemTaskItem generateDefaultTree(RProblemTypeMask problemTypeMask, bool transient = false);
 
         //! Allow RFileIO to access private members.
         friend class RFileIO;

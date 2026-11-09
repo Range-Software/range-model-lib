@@ -2,6 +2,14 @@
 
 ### Improvements
 
+- **RProblem::getSolveAfterProblemTypeMask()** new: problem types which should
+  be solved first when present, because their results are used
+- **RProblem::sortTypesByDependency()** also honours the solve-after order
+- **RProblemTaskItem::generateDefaultTree()** rewritten on top of the sorted
+  order, it no longer omits *Heat transfer in fluids* and sets the default
+  iterations for flow and radiation
+- **RProblemTaskItem** added `hasDefaultLayout()`, `getNeedsIterations()` and
+  `getDefaultNIterations()`
 - **REntityGroupData** added the *draw boundary conditions* display flag
   (`getDrawBoundaryConditions()`, `setDrawBoundaryConditions()`, default off),
   saved with the entity display properties

@@ -110,6 +110,11 @@ class RProblem
         //! Return excluded problem type mask.
         static RProblemTypeMask getExcludedProblemTypeMask(RProblemTypeMask typeMask);
 
+        //! Return mask of problem types which should be solved before given problem types when
+        //! they are present, because results of their solvers are used. Unlike required problem
+        //! types these do not have to be selected.
+        static RProblemTypeMask getSolveAfterProblemTypeMask(RProblemTypeMask typeMask);
+
         //! Return list of problem names for specified problem type mask.
         static std::vector<RProblemType> getTypes(RProblemTypeMask typeMask);
 
@@ -119,7 +124,8 @@ class RProblem
         //! Return list of result variable types computed and stored by solvers of given problem type mask.
         static std::vector<RVariableType> getComputedVariableTypes(RProblemTypeMask typeMask);
 
-        //! Sort list of problem types by dependency.
+        //! Sort list of problem types into order in which they should be solved.
+        //! Required and solve-after problem types come first, otherwise the order is kept.
         static void sortTypesByDependency(std::vector<RProblemType> &problemTypes);
 
 };

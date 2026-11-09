@@ -25,6 +25,7 @@ set(range_model_lib_tests
     tst_smoothed_variable
     tst_mesh_keep_results
     tst_mesh_points_lines
+    tst_problem_task_item
 )
 
 foreach(test_name IN LISTS range_model_lib_tests)

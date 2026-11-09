@@ -148,81 +148,76 @@ void RProblemTaskItem::print(bool printTitle) const
     }
 }
 
-RProblemTaskItem RProblemTaskItem::generateDefaultTree(RProblemTypeMask problemTypeMask)
+bool RProblemTaskItem::hasDefaultLayout(void) const
 {
-    RProblemTaskItem root;
-    unsigned int nTypes = 0;
-    unsigned int nNonlinearIterations = 5;
-
-    bool isNonlinear = false;
-
-    if (problemTypeMask & R_PROBLEM_RADIATIVE_HEAT && problemTypeMask & R_PROBLEM_HEAT)
+    if (this->problemType != R_PROBLEM_NONE)
     {
-        isNonlinear = true;
+        return false;
     }
 
-    if (problemTypeMask & R_PROBLEM_RADIATIVE_HEAT)
+    const RProblemTypeMask problemTypeMask = this->getProblemTypeMask();
+
+    // Problem types which can not be selected would be lost.
+    if (problemTypeMask & ~R_PROBLEM_ALL)
     {
-        root.addChild(RProblemTaskItem(R_PROBLEM_RADIATIVE_HEAT));
-        nTypes ++;
+        return false;
     }
-    if (problemTypeMask & R_PROBLEM_HEAT)
+
+    if (!RProblemTaskItem::getNeedsIterations(problemTypeMask) && this->nIterations != 1)
     {
-        root.addChild(RProblemTaskItem(R_PROBLEM_HEAT));
-        nTypes ++;
+        return false;
     }
-    if (problemTypeMask & R_PROBLEM_ACOUSTICS)
+
+    std::vector<RProblemType> problemTypes = RProblem::getTypes(problemTypeMask);
+    RProblem::sortTypesByDependency(problemTypes);
+
+    if (this->children.size() != problemTypes.size())
     {
-        root.addChild(RProblemTaskItem(R_PROBLEM_ACOUSTICS));
-        nTypes ++;
+        return false;
     }
-    if (problemTypeMask & R_PROBLEM_FLUID_PARTICLE)
+
+    for (std::size_t i=0;i<problemTypes.size();i++)
     {
-        root.addChild(RProblemTaskItem(R_PROBLEM_FLUID_PARTICLE));
-        nTypes ++;
+        if (this->children[i].problemType != problemTypes[i])
+        {
+            return false;
+        }
     }
+
+    return true;
+}
+
+bool RProblemTaskItem::getNeedsIterations(RProblemTypeMask problemTypeMask)
+{
+    return (problemTypeMask & (R_PROBLEM_FLUID | R_PROBLEM_RADIATIVE_HEAT)) != R_PROBLEM_NONE;
+}
+
+unsigned int RProblemTaskItem::getDefaultNIterations(RProblemTypeMask problemTypeMask, bool transient)
+{
     if (problemTypeMask & R_PROBLEM_FLUID)
     {
-        root.addChild(RProblemTaskItem(R_PROBLEM_FLUID));
-        nTypes ++;
+        return transient ? 20 : 2000;
     }
-    if (problemTypeMask & R_PROBLEM_ELECTROSTATICS)
+    if (problemTypeMask & R_PROBLEM_RADIATIVE_HEAT)
     {
-        root.addChild(RProblemTaskItem(R_PROBLEM_ELECTROSTATICS));
-        nTypes ++;
+        return 5;
     }
-    if (problemTypeMask & R_PROBLEM_MAGNETOSTATICS)
+    return 1;
+}
+
+RProblemTaskItem RProblemTaskItem::generateDefaultTree(RProblemTypeMask problemTypeMask, bool transient)
+{
+    RProblemTaskItem root;
+
+    std::vector<RProblemType> problemTypes = RProblem::getTypes(problemTypeMask);
+    RProblem::sortTypesByDependency(problemTypes);
+
+    for (RProblemType problemType : problemTypes)
     {
-        root.addChild(RProblemTaskItem(R_PROBLEM_MAGNETOSTATICS));
-        nTypes ++;
-    }
-    if (problemTypeMask & R_PROBLEM_STRESS)
-    {
-        root.addChild(RProblemTaskItem(R_PROBLEM_STRESS));
-        nTypes ++;
-    }
-    if (problemTypeMask & R_PROBLEM_STRESS_MODAL)
-    {
-        root.addChild(RProblemTaskItem(R_PROBLEM_STRESS_MODAL));
-        nTypes ++;
-    }
-    if (problemTypeMask & R_PROBLEM_POTENTIAL)
-    {
-        root.addChild(RProblemTaskItem(R_PROBLEM_POTENTIAL));
-        nTypes ++;
-    }
-    if (problemTypeMask & R_PROBLEM_WAVE)
-    {
-        root.addChild(RProblemTaskItem(R_PROBLEM_WAVE));
-        nTypes ++;
-    }
-    if (problemTypeMask & R_PROBLEM_MESH)
-    {
-        root.addChild(RProblemTaskItem(R_PROBLEM_MESH));
-        nTypes ++;
+        root.addChild(RProblemTaskItem(problemType));
     }
 
-    root.setNIterations(nTypes > 1 && isNonlinear ? nNonlinearIterations : 1);
+    root.setNIterations(RProblemTaskItem::getDefaultNIterations(problemTypeMask,transient));
 
     return root;
 }
