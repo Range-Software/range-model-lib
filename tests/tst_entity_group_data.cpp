@@ -1,4 +1,4 @@
-#include <QtTest>
+#include <QTest>
 #include <QTemporaryDir>
 
 #include "rml_entity_group_data.h"

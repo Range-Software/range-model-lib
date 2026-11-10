@@ -1,7 +1,6 @@
 #ifndef RML_RESULTS_H
 #define RML_RESULTS_H
 
-#include <string>
 #include <vector>
 
 #include "rml_variable.h"

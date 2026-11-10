@@ -6,7 +6,8 @@
 #include "rml_interpolated_node.h"
 #include "rml_node.h"
 #include "rml_element.h"
-#include "rml_variable.h"
+
+class RVariable;
 
 class RInterpolatedElement : public std::vector<RInterpolatedNode>
 {

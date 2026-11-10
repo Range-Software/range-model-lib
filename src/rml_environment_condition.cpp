@@ -1,7 +1,6 @@
 #include <rbl_error.h>
 
 #include "rml_environment_condition.h"
-#include "rml_problem.h"
 
 typedef struct _REnvironmentConditionDesc
 {

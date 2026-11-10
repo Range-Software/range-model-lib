@@ -1,5 +1,3 @@
-#include <cmath>
-
 #include <rbl_error.h>
 
 #include "rml_element.h"

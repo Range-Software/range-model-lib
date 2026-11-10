@@ -45,6 +45,11 @@
   returned the value of the opposite node at each end of a line
 - Added unit tests `tst_entity_group_data`, `tst_model_file_version`,
   `tst_smoothed_variable`, `tst_mesh_keep_results` and `tst_mesh_points_lines`
+- **RModel** header forward declares **RModelMsh** and **RModelRaw**, and
+  `rml_interpolated_element.h` forward declares **RVariable**, instead of including
+  their headers. Unused includes are removed from public headers and source files
+  and tests include `<QTest>` instead of the larger `<QtTest>`. Code that received
+  these headers through this library has to include them directly
 
 ### Known issues
 

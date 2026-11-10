@@ -1,7 +1,6 @@
 #include <rbl_error.h>
 
 #include "rml_initial_condition.h"
-#include "rml_problem.h"
 
 typedef struct _RInitialConditionDesc
 {

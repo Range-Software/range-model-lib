@@ -2,7 +2,6 @@
 #define RML_ELEMENT_H
 
 #include <vector>
-#include <string>
 
 #include <rbl_limit_box.h>
 #include <rbl_plane.h>

@@ -1,6 +1,3 @@
-#include <QString>
-#include <cstring>
-
 #include <tetgen.h>
 
 #include <rbl_error.h>

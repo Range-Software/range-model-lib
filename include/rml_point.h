@@ -1,9 +1,6 @@
 #ifndef RML_POINT_H
 #define RML_POINT_H
 
-#include <vector>
-
-#include "rml_element.h"
 #include "rml_element_group.h"
 
 //! Point element group class.

@@ -1,4 +1,4 @@
-#include <QtTest>
+#include <QTest>
 
 #include "rml_sparse_matrix.h"
 #include "rbl_rvector.h"

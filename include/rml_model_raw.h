@@ -3,7 +3,6 @@
 
 #include <QTextStream>
 
-#include <string>
 #include <vector>
 
 #include "rml_node.h"

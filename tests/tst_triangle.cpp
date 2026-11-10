@@ -1,4 +1,4 @@
-#include <QtTest>
+#include <QTest>
 
 #include "rml_triangle.h"
 #include "rml_node.h"

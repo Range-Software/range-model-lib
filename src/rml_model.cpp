@@ -1,10 +1,3 @@
-#include <QDir>
-#include <QSaveFile>
-#include <QFile>
-#include <QFileInfo>
-#include <QTextStream>
-#include <QSetIterator>
-
 #include <cmath>
 #include <omp.h>
 #include <stack>
@@ -22,6 +15,7 @@
 #include "rml_file_utils.h"
 #include "rml_view_factor_matrix.h"
 #include "rml_polygon.h"
+#include "rml_model_msh.h"
 
 const RVersion RModel::version = RVersion(FILE_MAJOR_VERSION,FILE_MINOR_VERSION,FILE_RELEASE_VERSION);
 

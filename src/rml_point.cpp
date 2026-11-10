@@ -1,4 +1,3 @@
-#include "rml_element.h"
 #include "rml_point.h"
 
 const QString RPoint::defaultName("Point");

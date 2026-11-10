@@ -1,8 +1,6 @@
 #ifndef RML_STREAM_LINE_H
 #define RML_STREAM_LINE_H
 
-#include <vector>
-
 #include "rml_variable.h"
 #include "rml_interpolated_entity.h"
 

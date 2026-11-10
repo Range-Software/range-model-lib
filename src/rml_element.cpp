@@ -1,7 +1,6 @@
 #include <QList>
 
 #include <vector>
-#include <string>
 #include <algorithm>
 #include <array>
 #include <cmath>

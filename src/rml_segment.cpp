@@ -5,7 +5,6 @@
 #include <rbl_utils.h>
 
 #include "rml_segment.h"
-#include "rml_triangle.h"
 
 void RSegment::_init(const RSegment *pSegment)
 {

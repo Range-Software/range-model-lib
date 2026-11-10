@@ -21,14 +21,15 @@
 #include "rml_results.h"
 #include "rml_mesh_input.h"
 #include "rml_model_data.h"
-#include "rml_model_msh.h"
 #include "rml_model_stl.h"
 #include "rml_model_step.h"
-#include "rml_model_raw.h"
 #include "rml_view_factor_matrix.h"
 #include "rml_scalar_field.h"
 #include "rml_stream_line.h"
 #include "rml_vector_field.h"
+
+class RModelMsh;
+class RModelRaw;
 
 
 //! Model problem types.

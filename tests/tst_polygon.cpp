@@ -1,4 +1,4 @@
-#include <QtTest>
+#include <QTest>
 #include <QMap>
 #include <QPair>
 

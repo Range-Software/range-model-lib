@@ -1,9 +1,6 @@
 #ifndef RML_SCALAR_FIELD_H
 #define RML_SCALAR_FIELD_H
 
-#include <vector>
-
-#include "rml_variable.h"
 #include "rml_vector_field.h"
 
 class RScalarField : public RVectorField

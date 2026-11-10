@@ -3,8 +3,7 @@
 
 #include <QSaveFile>
 #include <QTextStream>
-
-#include <rbl_utils.h>
+#include <rbl_version.h>
 
 class RSaveFile : public QSaveFile
 {

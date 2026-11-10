@@ -6,7 +6,6 @@
 
 #include "rml_entity_group.h"
 #include "rml_element.h"
-#include "rml_entity_group_data.h"
 #include "rml_boundary_condition.h"
 #include "rml_environment_condition.h"
 #include "rml_initial_condition.h"

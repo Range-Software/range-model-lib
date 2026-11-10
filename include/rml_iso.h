@@ -1,7 +1,6 @@
 #ifndef RML_ISO_H
 #define RML_ISO_H
 
-#include <string>
 #include <vector>
 
 #include "rml_variable.h"

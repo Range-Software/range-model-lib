@@ -1,4 +1,4 @@
-#include <QtTest>
+#include <QTest>
 #include <QTemporaryDir>
 
 #include <rbl_error.h>
