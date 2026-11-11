@@ -4,6 +4,11 @@
 #include "rml_condition.h"
 
 RCondition::RCondition ()
+    : applyOnPoint(false)
+    , applyOnLine(false)
+    , applyOnSurface(false)
+    , applyOnVolume(false)
+    , problemTypeMask(R_PROBLEM_NONE)
 {
     this->_init ();
 } /* RCondition::RCondition */

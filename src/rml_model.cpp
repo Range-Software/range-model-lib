@@ -8483,6 +8483,25 @@ QString RModel::readAscii(const QString &fileName)
         RFileIO::readAscii(modelFile,this->volumeNeigs[i]);
     }
 
+    // Reading support reactions. They were added at the end of file version
+    // 1.5.0 later on, so files saved before end with the neighbor information.
+    this->RResults::clearSupportReactions();
+    modelFile.getTextStream().skipWhiteSpace();
+    if (!modelFile.getTextStream().atEnd())
+    {
+        uint nSupportReactions = 0;
+        RFileIO::readAscii(modelFile,nSupportReactions);
+        RLogger::debug("Support reactions: %u\n",nSupportReactions);
+        std::vector<RSupportReaction> supportReactions(nSupportReactions);
+        for (uint i=0;i<nSupportReactions;i++)
+        {
+            RFileIO::readAscii(modelFile,supportReactions[i]);
+        }
+        RR3Vector appliedLoad;
+        RFileIO::readAscii(modelFile,appliedLoad);
+        this->RResults::setSupportReactions(supportReactions,appliedLoad);
+    }
+
     modelFile.close();
 
     return QString();
@@ -8683,6 +8702,24 @@ QString RModel::readBinary(const QString &fileName)
         RFileIO::readBinary(modelFile,this->volumeNeigs[i]);
     }
 
+    // Reading support reactions. They were added at the end of file version
+    // 1.5.0 later on, so files saved before end with the neighbor information.
+    this->RResults::clearSupportReactions();
+    if (!modelFile.atEnd())
+    {
+        uint nSupportReactions = 0;
+        RFileIO::readBinary(modelFile,nSupportReactions);
+        RLogger::debug("Support reactions: %u\n",nSupportReactions);
+        std::vector<RSupportReaction> supportReactions(nSupportReactions);
+        for (uint i=0;i<nSupportReactions;i++)
+        {
+            RFileIO::readBinary(modelFile,supportReactions[i]);
+        }
+        RR3Vector appliedLoad;
+        RFileIO::readBinary(modelFile,appliedLoad);
+        this->RResults::setSupportReactions(supportReactions,appliedLoad);
+    }
+
     modelFile.close();
 
     return QString();
@@ -8862,6 +8899,16 @@ void RModel::writeAscii(const QString &fileName) const
         RFileIO::writeAscii(modelFile,this->volumeNeigs[i]);
     }
 
+    // Writing support reactions. They are the last part of the file, so files
+    // saved before they were added read as having none.
+    RLogger::debug("Support reactions: %u\n",this->RResults::supportReactions.size());
+    RFileIO::writeAscii(modelFile,uint(this->RResults::supportReactions.size()));
+    for (const RSupportReaction &supportReaction : this->RResults::supportReactions)
+    {
+        RFileIO::writeAscii(modelFile,supportReaction);
+    }
+    RFileIO::writeAscii(modelFile,this->RResults::appliedLoad);
+
     modelFile.commit();
 
     RProgressFinalize("Done");
@@ -9029,6 +9076,16 @@ void RModel::writeBinary(const QString &fileName) const
     {
         RFileIO::writeBinary(modelFile,this->volumeNeigs[i]);
     }
+
+    // Writing support reactions. They are the last part of the file, so files
+    // saved before they were added read as having none.
+    RLogger::debug("Support reactions: %u\n",this->RResults::supportReactions.size());
+    RFileIO::writeBinary(modelFile,uint(this->RResults::supportReactions.size()));
+    for (const RSupportReaction &supportReaction : this->RResults::supportReactions)
+    {
+        RFileIO::writeBinary(modelFile,supportReaction);
+    }
+    RFileIO::writeBinary(modelFile,this->RResults::appliedLoad);
 
     modelFile.commit();
 

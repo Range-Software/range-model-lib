@@ -64,6 +64,7 @@ qt_add_library(range-model-lib
         src/rml_step_tessellator.cpp
         src/rml_stream_line.cpp
         src/rml_stress_setup.cpp
+        src/rml_support_reaction.cpp
         src/rml_surface.cpp
         src/rml_tetgen.cpp
         src/rml_tetrahedron.cpp
@@ -143,6 +144,7 @@ qt_add_library(range-model-lib
         include/rml_step_tessellator.h
         include/rml_stream_line.h
         include/rml_stress_setup.h
+        include/rml_support_reaction.h
         include/rml_surface.h
         include/rml_tetgen.h
         include/rml_tetrahedron.h

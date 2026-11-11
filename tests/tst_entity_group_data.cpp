@@ -107,8 +107,8 @@ void TestEntityGroupData::fileRoundTrip_data()
 {
     QTest::addColumn<bool>("binary");
 
-    // ASCII is not covered: RFileIO reads ASCII bool values inverted (pre-existing issue).
     QTest::newRow("binary") << true;
+    QTest::newRow("ascii") << false;
 }
 
 void TestEntityGroupData::fileRoundTrip()
@@ -155,8 +155,8 @@ void TestEntityGroupData::fileOldVersion_data()
 {
     QTest::addColumn<bool>("binary");
 
-    // ASCII is not covered: RFileIO reads ASCII bool values inverted (pre-existing issue).
     QTest::newRow("binary") << true;
+    QTest::newRow("ascii") << false;
 }
 
 void TestEntityGroupData::fileOldVersion()

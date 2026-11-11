@@ -3,6 +3,9 @@
 
 #include <vector>
 
+#include <rbl_r3vector.h>
+
+#include "rml_support_reaction.h"
 #include "rml_variable.h"
 
 //! Results class.
@@ -22,6 +25,10 @@ class RResults
         unsigned int nelements;
         //! Variables.
         std::vector<RVariable> variables;
+        //! Total reaction force of each support.
+        std::vector<RSupportReaction> supportReactions;
+        //! Total applied load [N], to compare with the support reactions.
+        RR3Vector appliedLoad;
 
     public:
 
@@ -81,7 +88,20 @@ class RResults
         void removeVariable(uint position);
 
         //! Remove all variables.
+        //! Support reactions are results as well and are removed too.
         void removeAllVariables();
+
+        //! Return total reaction force of each support.
+        const std::vector<RSupportReaction> &getSupportReactions() const;
+
+        //! Return total applied load which the support reactions balance.
+        const RR3Vector &getAppliedLoad() const;
+
+        //! Set total reaction force of each support and total applied load.
+        void setSupportReactions(const std::vector<RSupportReaction> &supportReactions, const RR3Vector &appliedLoad);
+
+        //! Remove support reactions.
+        void clearSupportReactions();
 
         //! Return number of nodes.
         unsigned int getNNodes() const;

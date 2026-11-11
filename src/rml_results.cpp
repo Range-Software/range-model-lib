@@ -10,6 +10,8 @@ void RResults::_init (const RResults *pResults)
 {
     this->nnodes = 0;
     this->nelements = 0;
+    this->supportReactions.clear();
+    this->appliedLoad = RR3Vector(0.0,0.0,0.0);
 
     if (pResults)
     {
@@ -21,6 +23,8 @@ void RResults::_init (const RResults *pResults)
         {
             this->setVariable(i, pResults->getVariable(i));
         }
+        this->supportReactions = pResults->supportReactions;
+        this->appliedLoad = pResults->appliedLoad;
     }
 } /* RResults::_init */
 
@@ -55,6 +59,7 @@ void RResults::clearResults()
         this->variables[i].clearValues();
     }
     this->variables.clear();
+    this->clearSupportReactions();
 } /* RResults::clearResults */
 
 
@@ -161,7 +166,34 @@ void RResults::removeVariable(uint position)
 void RResults::removeAllVariables()
 {
     this->variables.clear();
+    this->clearSupportReactions();
 } /* RResults::removeAllVariables */
+
+
+const std::vector<RSupportReaction> &RResults::getSupportReactions() const
+{
+    return this->supportReactions;
+} /* RResults::getSupportReactions */
+
+
+const RR3Vector &RResults::getAppliedLoad() const
+{
+    return this->appliedLoad;
+} /* RResults::getAppliedLoad */
+
+
+void RResults::setSupportReactions(const std::vector<RSupportReaction> &supportReactions, const RR3Vector &appliedLoad)
+{
+    this->supportReactions = supportReactions;
+    this->appliedLoad = appliedLoad;
+} /* RResults::setSupportReactions */
+
+
+void RResults::clearSupportReactions()
+{
+    this->supportReactions.clear();
+    this->appliedLoad = RR3Vector(0.0,0.0,0.0);
+} /* RResults::clearSupportReactions */
 
 
 unsigned int RResults::getNNodes() const

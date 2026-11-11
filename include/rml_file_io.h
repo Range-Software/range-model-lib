@@ -41,6 +41,7 @@
 #include "rml_problem_task_item.h"
 #include "rml_sparse_vector.h"
 #include "rml_stream_line.h"
+#include "rml_support_reaction.h"
 #include "rml_surface.h"
 #include "rml_volume.h"
 #include "rml_variable.h"
@@ -756,6 +757,17 @@ class RFileIO
         static void writeAscii(RFile &outFile, const RMonitoringPoint &monitoringPoint, bool addNewLine = true);
         //! Write RMonitoringPoint.
         static void writeBinary(RSaveFile &outFile, const RMonitoringPoint &monitoringPoint);
+
+        // RSupportReaction
+
+        //! Read RSupportReaction.
+        static void readAscii(RFile &inFile, RSupportReaction &supportReaction);
+        //! Read RSupportReaction.
+        static void readBinary(RFile &inFile, RSupportReaction &supportReaction);
+        //! Write RSupportReaction.
+        static void writeAscii(RSaveFile &outFile, const RSupportReaction &supportReaction, bool addNewLine = true);
+        //! Write RSupportReaction.
+        static void writeBinary(RSaveFile &outFile, const RSupportReaction &supportReaction);
 
         // RMonitoringPointManager
 

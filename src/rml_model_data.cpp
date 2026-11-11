@@ -1,6 +1,7 @@
 #include "rml_model_data.h"
 
 RModelData::RModelData()
+    : selected(false)
 {
     this->_init();
 }

@@ -2,6 +2,13 @@
 
 ### Improvements
 
+- **RSupportReaction** new: total reaction force of one support, with the type and
+  name of the supporting entity
+- **RResults** holds the support reactions and the total applied load
+  (`getSupportReactions()`, `getAppliedLoad()`, `setSupportReactions()`,
+  `clearSupportReactions()`). They are results: copied with the model, removed by
+  `removeAllVariables()` and `clearResults()`, and saved in the model file after
+  the variables
 - **RProblem::getSolveAfterProblemTypeMask()** new: problem types which should
   be solved first when present, because their results are used
 - **RProblem::sortTypesByDependency()** also honours the solve-after order
@@ -51,10 +58,19 @@
   and tests include `<QTest>` instead of the larger `<QtTest>`. Code that received
   these headers through this library has to include them directly
 
-### Known issues
+### Bug fixes
 
-- Boolean values are read inverted from ASCII files (`.ram`), which can also make
-  the value that follows fail to read. Binary files (`.rbm`) are not affected
+- ASCII files (`.ram`) could not be read back. Boolean values were written as the
+  raw characters 0x00 and 0x01 and read inverted, and the reader did not skip the
+  end of the previous line, so the values that followed failed to read. Booleans
+  are now written as `0` and `1`; the old characters are still read, with their
+  correct meaning
+- **RModelData** left the *selected* flag undefined, and **RCondition** the
+  *apply on point / line / surface / volume* flags and the problem type mask, so
+  environment and initial conditions saved undefined bytes. They are now
+  initialized. Booleans are also written as 0 or 1 whatever byte they hold, and
+  any byte other than 0 read from a binary file is taken as true, so files saved
+  by older versions with undefined bytes load with defined values
 
 ### File format
 
@@ -62,6 +78,9 @@
   entity *draw boundary conditions* flag; older files load with it off. This is
   a breaking change: software supporting file version 1.4.0 or older cannot
   read 1.5.0 files correctly
+- Support reactions are saved at the end of the model file, which stays at
+  version **1.5.0**. Files saved without them are read as having none, and
+  software that does not know them stops reading before them
 
 ---
 

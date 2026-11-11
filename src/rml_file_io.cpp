@@ -2,7 +2,26 @@
 #include <rbl_logger.h>
 #include <rbl_utils.h>
 
+#include <cstring>
+
 #include "rml_file_io.h"
+
+namespace
+{
+
+static_assert(sizeof(bool) == 1, "Bool values are stored in files as one byte.");
+
+//! Return the value of a bool from its byte, so that a bool holding a byte
+//! other than 0 or 1 (an uninitialized member, or one read from an older
+//! binary file) is still written and compared as a proper value.
+bool normalizedBool(const bool &bValue)
+{
+    unsigned char byte = 0;
+    std::memcpy(&byte,&bValue,sizeof(byte));
+    return byte != 0;
+}
+
+}
 
 
 void RFileIO::writeNewLineAscii(RSaveFile &outFile)
@@ -32,35 +51,51 @@ void RFileIO::writeNewLineAscii(RFile &outFile)
 
 void RFileIO::readAscii(RFile &inFile, bool &bValue)
 {
-    char c;
+    // Values are written as '0' and '1'. Older versions wrote the raw
+    // characters 0x00 and 0x01, which are accepted as well. Reading a QChar
+    // does not skip white space on its own, so the end of the previous line
+    // has to be skipped first.
+    QChar c;
+    inFile.getTextStream().skipWhiteSpace();
     inFile.getTextStream() >> c;
-    bValue = (c == 0);
     if (inFile.getTextStream().status() != QTextStream::Ok)
     {
         throw RError(RError::Type::ReadFile,R_ERROR_REF, "Failed to read bool value.");
+    }
+    if (c == QLatin1Char('1') || c.unicode() == 0x01)
+    {
+        bValue = true;
+    }
+    else if (c == QLatin1Char('0') || c.unicode() == 0x00)
+    {
+        bValue = false;
+    }
+    else
+    {
+        throw RError(RError::Type::ReadFile,R_ERROR_REF, "Failed to read bool value. Unexpected character 0x%04X.",uint(c.unicode()));
     }
 } /* RFileIO::readAscii */
 
 
 void RFileIO::readBinary(RFile &inFile, bool &bValue)
 {
-    inFile.read((char*)&bValue,sizeof(bool));
+    // Older files may hold any byte, any other than 0 is true.
+    char byte = 0;
+    inFile.read(&byte,sizeof(byte));
     if (inFile.error() != RFile::NoError)
     {
         throw RError(RError::Type::ReadFile,R_ERROR_REF,"Failed to read bool value.");
     }
+    bValue = (byte != 0);
 } /* RFileIO::readBinary */
 
 
 void RFileIO::writeAscii(RSaveFile &outFile, const bool &bValue, bool addNewLine)
 {
-    if (!addNewLine)
+    outFile.getTextStream() << QLatin1Char(normalizedBool(bValue) ? '1' : '0');
+    if (addNewLine)
     {
-        outFile.getTextStream() << bValue;
-    }
-    else
-    {
-        outFile.getTextStream() << char(bValue) << RConstants::endl;
+        outFile.getTextStream() << RConstants::endl;
     }
     if (outFile.getTextStream().status() != QTextStream::Ok)
     {
@@ -71,7 +106,8 @@ void RFileIO::writeAscii(RSaveFile &outFile, const bool &bValue, bool addNewLine
 
 void RFileIO::writeBinary(RSaveFile &outFile, const bool &bValue)
 {
-    outFile.write((char*)&bValue,sizeof(bool));
+    const char byte = normalizedBool(bValue) ? 1 : 0;
+    outFile.write(&byte,sizeof(byte));
     if (outFile.error() != RFile::NoError)
     {
         throw RError(RError::Type::WriteFile,R_ERROR_REF,"Failed to write bool value.");
@@ -4404,6 +4440,60 @@ void RFileIO::writeBinary(RSaveFile &outFile, const RMonitoringPoint &monitoring
 {
     RFileIO::writeBinary(outFile,monitoringPoint.variableType);
     RFileIO::writeBinary(outFile,monitoringPoint.position);
+}
+
+
+/*********************************************************************
+ *  RSupportReaction                                                 *
+ *********************************************************************/
+
+
+void RFileIO::readAscii(RFile &inFile, RSupportReaction &supportReaction)
+{
+    uint entityType = 0;
+    QString name;
+    RR3Vector force;
+    RFileIO::readAscii(inFile,entityType);
+    RFileIO::readAscii(inFile,name);
+    RFileIO::readAscii(inFile,force);
+    supportReaction = RSupportReaction(REntityGroupType(entityType),name,force);
+}
+
+
+void RFileIO::readBinary(RFile &inFile, RSupportReaction &supportReaction)
+{
+    uint entityType = 0;
+    QString name;
+    RR3Vector force;
+    RFileIO::readBinary(inFile,entityType);
+    RFileIO::readBinary(inFile,name);
+    RFileIO::readBinary(inFile,force);
+    supportReaction = RSupportReaction(REntityGroupType(entityType),name,force);
+}
+
+
+void RFileIO::writeAscii(RSaveFile &outFile, const RSupportReaction &supportReaction, bool addNewLine)
+{
+    RFileIO::writeAscii(outFile,uint(supportReaction.getEntityType()),addNewLine);
+    if (!addNewLine)
+    {
+        RFileIO::writeAscii(outFile,' ',false);
+    }
+    // Quoted, the name may contain spaces.
+    RFileIO::writeAscii(outFile,"\"" + supportReaction.getName() + "\"",addNewLine);
+    if (!addNewLine)
+    {
+        RFileIO::writeAscii(outFile,' ',false);
+    }
+    RFileIO::writeAscii(outFile,supportReaction.getForce(),addNewLine);
+}
+
+
+void RFileIO::writeBinary(RSaveFile &outFile, const RSupportReaction &supportReaction)
+{
+    RFileIO::writeBinary(outFile,uint(supportReaction.getEntityType()));
+    RFileIO::writeBinary(outFile,supportReaction.getName());
+    RFileIO::writeBinary(outFile,supportReaction.getForce());
 }
 
 
