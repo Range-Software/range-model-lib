@@ -32,6 +32,7 @@ qt_add_library(range-model-lib
         src/rml_matrix_solver_conf.cpp
         src/rml_mesh_generator.cpp
         src/rml_mesh_input.cpp
+        src/rml_mesh_results_interpolator.cpp
         src/rml_mesh_setup.cpp
         src/rml_modal_setup.cpp
         src/rml_model.cpp
@@ -40,6 +41,7 @@ qt_add_library(range-model-lib
         src/rml_model_raw.cpp
         src/rml_model_step.cpp
         src/rml_model_stl.cpp
+        src/rml_model_tetra_mesh.cpp
         src/rml_monitoring_point.cpp
         src/rml_monitoring_point_manager.cpp
         src/rml_node.cpp
@@ -110,6 +112,7 @@ qt_add_library(range-model-lib
         include/rml_matrix_solver_conf.h
         include/rml_mesh_generator.h
         include/rml_mesh_input.h
+        include/rml_mesh_results_interpolator.h
         include/rml_mesh_setup.h
         include/rml_modal_setup.h
         include/rml_model.h
@@ -118,6 +121,7 @@ qt_add_library(range-model-lib
         include/rml_model_raw.h
         include/rml_model_step.h
         include/rml_model_stl.h
+        include/rml_model_tetra_mesh.h
         include/rml_monitoring_point.h
         include/rml_monitoring_point_manager.h
         include/rml_node.h
@@ -178,6 +182,7 @@ target_include_directories(range-model-lib
 target_link_libraries(range-model-lib
     PUBLIC
         range-base-lib
+        range-element-lib
         TetGen
         OpenMP::OpenMP_CXX
         Qt6::Gui

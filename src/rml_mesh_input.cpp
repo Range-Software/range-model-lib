@@ -4,6 +4,7 @@ void RMeshInput::_init(const RMeshInput *pMeshInput)
 {
     if (pMeshInput)
     {
+        this->generatorType = pMeshInput->generatorType;
         this->verbose = pMeshInput->verbose;
         this->volumeMesh = pMeshInput->volumeMesh;
         this->qualityMesh = pMeshInput->qualityMesh;
@@ -22,6 +23,7 @@ void RMeshInput::_init(const RMeshInput *pMeshInput)
 }
 
 RMeshInput::RMeshInput() :
+    generatorType(R_MESH_GENERATOR_TETGEN),
     verbose(true),
     volumeMesh(true),
     qualityMesh(true),
@@ -52,6 +54,29 @@ RMeshInput &RMeshInput::operator =(const RMeshInput &meshInput)
 {
     this->_init(&meshInput);
     return (*this);
+}
+
+RMeshGeneratorType RMeshInput::getGeneratorType(void) const
+{
+    return this->generatorType;
+}
+
+void RMeshInput::setGeneratorType(RMeshGeneratorType generatorType)
+{
+    this->generatorType = generatorType;
+}
+
+QString RMeshInput::getGeneratorName(RMeshGeneratorType generatorType)
+{
+    switch (generatorType)
+    {
+        case R_MESH_GENERATOR_TETGEN:
+            return "TetGen";
+        case R_MESH_GENERATOR_RANGE:
+            return "Range";
+        default:
+            return QString();
+    }
 }
 
 bool RMeshInput::getVerbose(void) const

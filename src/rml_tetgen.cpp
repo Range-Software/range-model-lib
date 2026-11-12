@@ -6,8 +6,8 @@
 
 #include <rbl_error.h>
 #include <rbl_logger.h>
-#include <rbl_progress.h>
 
+#include "rml_mesh_results_interpolator.h"
 #include "rml_tetgen.h"
 
 RTetGen::RTetGen(const RModel &model)
@@ -285,207 +285,6 @@ void RTetGen::importModel(const RModel &model, bool reconstruct, const RRVector 
     }
 }
 
-//! Element which results of a position are taken from.
-struct ResultsLocation
-{
-    //! Element ID, RConstants::eod if there is none.
-    uint elementID = RConstants::eod;
-    //! Weights of element nodes.
-    RRVector ratios;
-};
-
-//! Finds elements of a mesh which results are taken from.
-class ResultsLocator
-{
-    private:
-
-        const RModel &model;
-        //! Element bounding boxes: min X, Y, Z and max X, Y, Z.
-        std::vector<std::array<double,6>> boxes;
-        //! Distance below which a position is considered to be on an element.
-        double tolerance;
-        //! Entity group types which have elements.
-        REntityGroupTypeMask availableGroups;
-
-    public:
-
-        explicit ResultsLocator(const RModel &model)
-            : model(model)
-            , boxes(model.getNElements())
-            , tolerance(0.0)
-            , availableGroups(REntityGroupTypeMask(0))
-        {
-            std::array<double,3> modelMin = {0.0,0.0,0.0};
-            std::array<double,3> modelMax = {0.0,0.0,0.0};
-            for (uint i=0;i<model.getNNodes();i++)
-            {
-                const RNode &rNode = model.getNode(i);
-                const std::array<double,3> position = {rNode.getX(),rNode.getY(),rNode.getZ()};
-                for (uint j=0;j<3;j++)
-                {
-                    modelMin[j] = (i == 0) ? position[j] : std::min(modelMin[j],position[j]);
-                    modelMax[j] = (i == 0) ? position[j] : std::max(modelMax[j],position[j]);
-                }
-            }
-            this->tolerance = 1.0e-10 * std::hypot(modelMax[0]-modelMin[0],modelMax[1]-modelMin[1],modelMax[2]-modelMin[2]);
-
-            for (uint i=0;i<model.getNElements();i++)
-            {
-                const RElement &rElement = model.getElement(i);
-                this->availableGroups = REntityGroupTypeMask(this->availableGroups | RElementGroup::getGroupType(rElement.getType()));
-                std::array<double,6> &rBox = this->boxes[i];
-                for (uint j=0;j<rElement.size();j++)
-                {
-                    const RNode &rNode = model.getNode(rElement.getNodeId(j));
-                    const std::array<double,3> position = {rNode.getX(),rNode.getY(),rNode.getZ()};
-                    for (uint k=0;k<3;k++)
-                    {
-                        rBox[k] = (j == 0) ? position[k] : std::min(rBox[k],position[k]);
-                        rBox[k+3] = (j == 0) ? position[k] : std::max(rBox[k+3],position[k]);
-                    }
-                }
-            }
-        }
-
-        //! Find element of given groups containing given position or being the closest one to it.
-        //! Groups without elements are replaced by all elements.
-        ResultsLocation find(const RNode &rNode, REntityGroupTypeMask groups) const
-        {
-            if ((this->availableGroups & groups) == 0)
-            {
-                groups = R_ENTITY_GROUP_ELEMENT;
-            }
-
-            ResultsLocation location;
-            double minDistance = std::numeric_limits<double>::max();
-            RRVector ratios;
-
-            // Rounding can put a position just outside of all elements, or the new mesh
-            // can reach further than the old one. Then all elements are searched.
-            for (bool useBoxes : {true,false})
-            {
-                for (uint i=0;i<this->model.getNElements();i++)
-                {
-                    const RElement &rElement = this->model.getElement(i);
-                    if ((RElementGroup::getGroupType(rElement.getType()) & groups) == 0)
-                    {
-                        continue;
-                    }
-                    if (useBoxes && !this->isInsideBox(i,rNode))
-                    {
-                        continue;
-                    }
-                    const double distance = rElement.findClosestPoint(this->model.getNodes(),rNode,ratios);
-                    if (distance < minDistance)
-                    {
-                        minDistance = distance;
-                        location.elementID = i;
-                        location.ratios = ratios;
-                        if (minDistance <= this->tolerance)
-                        {
-                            return location;
-                        }
-                    }
-                }
-            }
-            return location;
-        }
-
-    private:
-
-        bool isInsideBox(uint elementID, const RNode &rNode) const
-        {
-            const std::array<double,6> &rBox = this->boxes[elementID];
-            return rNode.getX() >= rBox[0] - this->tolerance && rNode.getX() <= rBox[3] + this->tolerance
-                && rNode.getY() >= rBox[1] - this->tolerance && rNode.getY() <= rBox[4] + this->tolerance
-                && rNode.getZ() >= rBox[2] - this->tolerance && rNode.getZ() <= rBox[5] + this->tolerance;
-        }
-};
-
-static std::vector<ResultsLocation> findNodeLocations(const RTetGen &tetgen, const ResultsLocator &locator)
-{
-    std::vector<ResultsLocation> locations(static_cast<size_t>(tetgen.numberofpoints));
-
-#pragma omp parallel for default(shared)
-    for (int64_t i=0;i<tetgen.numberofpoints;i++)
-    {
-        locations[size_t(i)] = locator.find(RNode(tetgen.pointlist[3*i+0],tetgen.pointlist[3*i+1],tetgen.pointlist[3*i+2]),
-                                            R_ENTITY_GROUP_ELEMENT);
-    }
-    return locations;
-}
-
-static std::vector<ResultsLocation> findElementLocations(const RTetGen &tetgen,
-                                                         const ResultsLocator &locator,
-                                                         uint numberOfPointElements,
-                                                         uint numberOfLineElements)
-{
-    // Elements are ordered in the same way as when they are added to the model.
-    struct NewElement
-    {
-        std::array<int,4> nodeIDs;
-        uint nNodes;
-        REntityGroupTypeMask group;
-    };
-    std::vector<NewElement> newElements;
-    newElements.reserve(numberOfPointElements + numberOfLineElements + uint(tetgen.numberoftrifaces) + uint(tetgen.numberoftetrahedra));
-
-    if (tetgen.pointmarkerlist)
-    {
-        for (int i=0;i<tetgen.numberofpoints;i++)
-        {
-            if (tetgen.pointmarkerlist[i] > 0)
-            {
-                newElements.push_back({{i,0,0,0},1,R_ENTITY_GROUP_POINT});
-            }
-        }
-    }
-    if (tetgen.edgemarkerlist)
-    {
-        for (int i=0;i<tetgen.numberofedges;i++)
-        {
-            if (isLineEdgeMarker(tetgen.edgemarkerlist[i]))
-            {
-                newElements.push_back({{tetgen.edgelist[2*i+0] - tetgen.firstnumber,
-                                        tetgen.edgelist[2*i+1] - tetgen.firstnumber,0,0},2,R_ENTITY_GROUP_LINE});
-            }
-        }
-    }
-    for (int i=0;i<tetgen.numberoftrifaces;i++)
-    {
-        newElements.push_back({{tetgen.trifacelist[3*i+0] - tetgen.firstnumber,
-                                tetgen.trifacelist[3*i+1] - tetgen.firstnumber,
-                                tetgen.trifacelist[3*i+2] - tetgen.firstnumber,0},3,R_ENTITY_GROUP_SURFACE});
-    }
-    for (int i=0;i<tetgen.numberoftetrahedra;i++)
-    {
-        newElements.push_back({{tetgen.tetrahedronlist[4*i+0] - tetgen.firstnumber,
-                                tetgen.tetrahedronlist[4*i+1] - tetgen.firstnumber,
-                                tetgen.tetrahedronlist[4*i+2] - tetgen.firstnumber,
-                                tetgen.tetrahedronlist[4*i+3] - tetgen.firstnumber},4,R_ENTITY_GROUP_VOLUME});
-    }
-
-    std::vector<ResultsLocation> locations(newElements.size());
-
-#pragma omp parallel for default(shared)
-    for (int64_t i=0;i<int64_t(newElements.size());i++)
-    {
-        const NewElement &rNewElement = newElements[size_t(i)];
-        double x = 0.0, y = 0.0, z = 0.0;
-        for (uint j=0;j<rNewElement.nNodes;j++)
-        {
-            const int nodeID = rNewElement.nodeIDs[j];
-            x += tetgen.pointlist[3*nodeID+0];
-            y += tetgen.pointlist[3*nodeID+1];
-            z += tetgen.pointlist[3*nodeID+2];
-        }
-        // Element takes value from the same kind of element, as they can have different results.
-        locations[size_t(i)] = locator.find(RNode(x/rNewElement.nNodes,y/rNewElement.nNodes,z/rNewElement.nNodes),
-                                            rNewElement.group);
-    }
-    return locations;
-}
-
 void RTetGen::exportMesh(RModel &model, bool keepResults) const
 {
     // Find number of point elements.
@@ -519,77 +318,52 @@ void RTetGen::exportMesh(RModel &model, bool keepResults) const
 
     if (keepResults && model.getNVariables() > 0)
     {
-        RLogger::info("Interpolating results\n");
-        RLogger::indent();
-
-        const ResultsLocator locator(model);
-
-        // Variables share the same positions, so each position is searched only once.
-        std::vector<ResultsLocation> nodeLocations;
-        std::vector<ResultsLocation> elementLocations;
-
-        RProgressInitialize("Interpolating results");
-        for (uint i=0;i<model.getNVariables();i++)
+        // Nodes and elements are ordered in the same way as when they are added to the model.
+        std::vector<RNode> nodes;
+        nodes.reserve(size_t(this->numberofpoints));
+        for (int i=0;i<this->numberofpoints;i++)
         {
-            RProgressPrint(i,model.getNVariables());
-            RVariable variable = model.getVariable(i);
-            RLogger::info("Interpolating %s\n",variable.getName().toUtf8().constData());
-            RLogger::indent();
-            const RVariable &rOldVariable = model.getVariable(i);
-            if (rOldVariable.getApplyType() == R_VARIABLE_APPLY_NODE)
-            {
-                if (nodeLocations.empty())
-                {
-                    nodeLocations = findNodeLocations(*this,locator);
-                }
-                variable.resize(variable.getNVectors(),uint(this->numberofpoints),true);
-#pragma omp parallel for default(shared)
-                for (int64_t j=0;j<this->numberofpoints;j++)
-                {
-                    const ResultsLocation &rLocation = nodeLocations[size_t(j)];
-                    if (rLocation.elementID == RConstants::eod)
-                    {
-                        continue;
-                    }
-                    const RElement &rElement = model.getElement(rLocation.elementID);
-                    for (uint k=0;k<variable.getNVectors();k++)
-                    {
-                        double value = 0.0;
-                        for (uint l=0;l<rLocation.ratios.size();l++)
-                        {
-                            value += rLocation.ratios[l] * rOldVariable.getValue(k,rElement.getNodeId(l));
-                        }
-                        variable.setValue(k,uint(j),value);
-                    }
-                }
-                variables.push_back(variable);
-            }
-            else if (rOldVariable.getApplyType() == R_VARIABLE_APPLY_ELEMENT)
-            {
-                if (elementLocations.empty())
-                {
-                    elementLocations = findElementLocations(*this,locator,numberOfPointElements,numberOfLineElements);
-                }
-                variable.resize(variable.getNVectors(),uint(elementLocations.size()),true);
-#pragma omp parallel for default(shared)
-                for (int64_t j=0;j<int64_t(elementLocations.size());j++)
-                {
-                    const ResultsLocation &rLocation = elementLocations[size_t(j)];
-                    if (rLocation.elementID == RConstants::eod)
-                    {
-                        continue;
-                    }
-                    for (uint k=0;k<variable.getNVectors();k++)
-                    {
-                        variable.setValue(k,uint(j),rOldVariable.getValue(k,rLocation.elementID));
-                    }
-                }
-                variables.push_back(variable);
-            }
-            RLogger::unindent();
+            nodes.push_back(RNode(this->pointlist[3*i+0],this->pointlist[3*i+1],this->pointlist[3*i+2]));
         }
-        RProgressFinalize();
-        RLogger::unindent();
+
+        std::vector<RMeshResultsInterpolator::Element> elements;
+        elements.reserve(numberOfPointElements + numberOfLineElements + uint(this->numberoftrifaces) + uint(this->numberoftetrahedra));
+        if (this->pointmarkerlist)
+        {
+            for (int i=0;i<this->numberofpoints;i++)
+            {
+                if (this->pointmarkerlist[i] > 0)
+                {
+                    elements.push_back({{uint(i),0,0,0},1,R_ENTITY_GROUP_POINT});
+                }
+            }
+        }
+        if (this->edgemarkerlist)
+        {
+            for (int i=0;i<this->numberofedges;i++)
+            {
+                if (isLineEdgeMarker(this->edgemarkerlist[i]))
+                {
+                    elements.push_back({{uint(this->edgelist[2*i+0] - this->firstnumber),
+                                         uint(this->edgelist[2*i+1] - this->firstnumber),0,0},2,R_ENTITY_GROUP_LINE});
+                }
+            }
+        }
+        for (int i=0;i<this->numberoftrifaces;i++)
+        {
+            elements.push_back({{uint(this->trifacelist[3*i+0] - this->firstnumber),
+                                 uint(this->trifacelist[3*i+1] - this->firstnumber),
+                                 uint(this->trifacelist[3*i+2] - this->firstnumber),0},3,R_ENTITY_GROUP_SURFACE});
+        }
+        for (int i=0;i<this->numberoftetrahedra;i++)
+        {
+            elements.push_back({{uint(this->tetrahedronlist[4*i+0] - this->firstnumber),
+                                 uint(this->tetrahedronlist[4*i+1] - this->firstnumber),
+                                 uint(this->tetrahedronlist[4*i+2] - this->firstnumber),
+                                 uint(this->tetrahedronlist[4*i+3] - this->firstnumber)},4,R_ENTITY_GROUP_VOLUME});
+        }
+
+        variables = RMeshResultsInterpolator::interpolate(model,nodes,elements);
     }
 
     // NODES

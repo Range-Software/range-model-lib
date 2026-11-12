@@ -14,9 +14,12 @@ class RMeshGenerator
         //! Constructor.
         RMeshGenerator() {}
 
+        //! Generate volume mesh with the Range mesh generator.
+        static void generateRange(const RMeshInput &meshInput, RModel &model);
+
     public:
 
-        //! Generate volume mesh.
+        //! Generate volume mesh with a mesh generator selected by mesh input.
         static void generate(const RMeshInput &meshInput, RModel &model);
 
         //! Generate volume mesh from triangulated surface.

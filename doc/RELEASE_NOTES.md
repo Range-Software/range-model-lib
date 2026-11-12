@@ -1,3 +1,24 @@
+## Version 1.4.0
+
+### Improvements
+
+- **RMeshGenerator** can generate a volume mesh with the Range mesh generator from
+  the new `range-element-lib`, as an alternative to TetGen. The generator is
+  selected by **RMeshInput** (`getGeneratorType()`, `setGeneratorType()`,
+  `getGeneratorName()`), TetGen remains the default. The Range mesh generator uses
+  the quality mesh, radius/edge ratio, volume constraint, size function, tolerance,
+  reconstruct and keep results settings; TetGen input parameters do not apply to it
+- **RModelTetraMesh** new: converts `RModel` to input of the Range mesh generator
+  and its output back to `RModel`
+- **RMeshResultsInterpolator** new: interpolation of results to a new mesh, which
+  was a part of `RTetGen`, is shared by both mesh generators
+
+### Dependencies
+
+- `range-element-lib` is required
+
+---
+
 ## Version 1.3.0
 
 ### Improvements

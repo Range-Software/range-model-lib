@@ -8,7 +8,8 @@
 - `RNode`, `RElement` — nodes and elements with shape-function evaluation, Jacobian computation, and isoparametric coordinate mapping
 - `RPoint`, `RLine`, `RSurface`, `RVolume` — entity groups that own sets of elements and carry boundary/initial conditions and material assignments
 - `RTriangle`, `RTetrahedron`, `RSegment` — geometric primitives used by the mesh generator and ray-tracing subsystems
-- `RMeshGenerator`, `RMeshInput`, `RMeshSetup` — interface to the TetGen tetrahedral mesher
+- `RMeshGenerator`, `RMeshInput`, `RMeshSetup` — interface to tetrahedral mesh generators: TetGen (`RTetGen`) and the Range mesh generator from `range-element-lib` (`RModelTetraMesh`), selected by `RMeshInput::setGeneratorType()`
+- `RMeshResultsInterpolator` — interpolation of results to a newly generated mesh
 - `RShapeGenerator` — parametric shape creation
 
 **Physics setup**

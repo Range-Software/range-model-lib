@@ -5,11 +5,23 @@
 
 #include <rbl_rvector.h>
 
+//! Generator of volume mesh.
+typedef enum _RMeshGeneratorType
+{
+    //! TetGen library.
+    R_MESH_GENERATOR_TETGEN = 0,
+    //! Range tetrahedral mesh generator (range-element-lib).
+    R_MESH_GENERATOR_RANGE,
+    R_MESH_GENERATOR_N_TYPES
+} RMeshGeneratorType;
+
 class RMeshInput
 {
 
     protected:
 
+        //! Mesh generator.
+        RMeshGeneratorType generatorType;
         //! Verbose output.
         bool verbose;
         //! Generate volume mesh.
@@ -58,6 +70,15 @@ class RMeshInput
 
         //! Assignment operator.
         RMeshInput & operator = ( const RMeshInput &meshInput );
+
+        //! Return mesh generator.
+        RMeshGeneratorType getGeneratorType(void) const;
+
+        //! Set mesh generator.
+        void setGeneratorType(RMeshGeneratorType generatorType);
+
+        //! Return name of a mesh generator.
+        static QString getGeneratorName(RMeshGeneratorType generatorType);
 
         //! Return verbose.
         bool getVerbose(void) const;
