@@ -1542,7 +1542,7 @@ bool RStepTessellator::triangulateFace(const RStepSurface &surface,
                 }
             }
         }
-        if ((loopB.net[d] == 0.0))
+        if (loopB.net[d] == 0.0)
         {
             return false;
         }
