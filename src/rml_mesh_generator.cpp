@@ -1,4 +1,6 @@
 #include <tetgen.h>
+#include <QScopeGuard>
+#include <rbl_progress.h>
 
 #include <rbl_error.h>
 #include <rbl_logger.h>
@@ -16,6 +18,8 @@ static const double rangeMinDihedralAngle = 10.0;
 
 void RMeshGenerator::generateRange(const RMeshInput &meshInput, RModel &model)
 {
+    RProgressInitialize("Converting Range model to mesh generator input.",true);
+    const auto progressGuard = qScopeGuard([]() { RProgressFinalize(); });
     const bool reconstruct = meshInput.getReconstruct() && model.getNVolumes() > 0;
 
     RModelTetraMesh meshIn;
@@ -65,6 +69,7 @@ void RMeshGenerator::generateRange(const RMeshInput &meshInput, RModel &model)
     {
         RLogger::info("Converting generated mesh to Range model.\n");
         RLogger::indent();
+        RProgressInitialize("Converting generated mesh to Range model.",true);
         meshOut.exportMesh(model,meshInput.getKeepResults());
         RLogger::unindent();
     }

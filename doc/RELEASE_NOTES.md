@@ -12,6 +12,10 @@
   and its output back to `RModel`
 - **RMeshResultsInterpolator** new: interpolation of results to a new mesh, which
   was a part of `RTetGen`, is shared by both mesh generators
+- **RMeshGenerator** reports pulsing progress while converting a model to Range mesh
+  input and converting the generated mesh back. Conversion status text matches the
+  log, progress resumes after result interpolation, and exceptions finalize the
+  progress indicator
 
 ### Dependencies
 

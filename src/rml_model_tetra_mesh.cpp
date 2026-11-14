@@ -2,6 +2,8 @@
 #include <vector>
 
 #include <rbl_error.h>
+#include <rbl_logger.h>
+#include <rbl_progress.h>
 
 #include "rml_mesh_results_interpolator.h"
 #include "rml_model_tetra_mesh.h"
@@ -175,6 +177,8 @@ void RModelTetraMesh::exportMesh(RModel &model, bool keepResults) const
         }
 
         variables = RMeshResultsInterpolator::interpolate(model,newNodes,newElements);
+        RLogger::info("Converting generated mesh to Range model.\n");
+        RProgressInitialize("Converting generated mesh to Range model.",true);
     }
 
     // NODES
