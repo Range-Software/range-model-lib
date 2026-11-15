@@ -1,5 +1,10 @@
 ## Unreleased
 
+### Improvements
+
+- **RMeshInput** selects the Range mesh generator by default. TetGen remains
+  available through `setGeneratorType()`
+
 ### New features
 
 #### Second order elements

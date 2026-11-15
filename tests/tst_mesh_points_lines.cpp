@@ -239,6 +239,7 @@ void TestMeshPointsLines::customParameters()
 {
     RModel model = createModel();
     RMeshInput meshInput = createMeshInput(0.1);
+    meshInput.setGeneratorType(R_MESH_GENERATOR_TETGEN);
     meshInput.setUseTetGenInputParams(true);
     meshInput.setTetGenInputParams("npAQq1.6a0.1");
     RMeshGenerator::generate(meshInput,model);

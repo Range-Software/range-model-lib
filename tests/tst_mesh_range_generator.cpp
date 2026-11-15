@@ -233,14 +233,14 @@ class TestMeshRangeGenerator : public QObject
 
 void TestMeshRangeGenerator::generatorName()
 {
-    QCOMPARE(RMeshInput().getGeneratorType(),R_MESH_GENERATOR_TETGEN);
+    QCOMPARE(RMeshInput().getGeneratorType(),R_MESH_GENERATOR_RANGE);
     QCOMPARE(RMeshInput::getGeneratorName(R_MESH_GENERATOR_TETGEN),QString("TetGen"));
     QCOMPARE(RMeshInput::getGeneratorName(R_MESH_GENERATOR_RANGE),QString("Range"));
 
     RMeshInput meshInput;
-    meshInput.setGeneratorType(R_MESH_GENERATOR_RANGE);
+    meshInput.setGeneratorType(R_MESH_GENERATOR_TETGEN);
     const RMeshInput copy(meshInput);
-    QCOMPARE(copy.getGeneratorType(),R_MESH_GENERATOR_RANGE);
+    QCOMPARE(copy.getGeneratorType(),R_MESH_GENERATOR_TETGEN);
 }
 
 void TestMeshRangeGenerator::generate_data()

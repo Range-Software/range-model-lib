@@ -24,7 +24,7 @@ void RMeshInput::_init(const RMeshInput *pMeshInput)
 }
 
 RMeshInput::RMeshInput() :
-    generatorType(R_MESH_GENERATOR_TETGEN),
+    generatorType(R_MESH_GENERATOR_RANGE),
     verbose(true),
     volumeMesh(true),
     qualityMesh(true),
