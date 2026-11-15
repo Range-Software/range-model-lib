@@ -896,6 +896,28 @@ class RModel : public RProblem, public RResults
         //! Generate input parameters for TetGen mesh generator.
         QString generateMeshTetGenInputParams(const RMeshInput &meshInput) const;
 
+        //! Return order of elements of the mesh: 2 if there is a second order element, 1 otherwise.
+        uint findElementOrder(void) const;
+
+        //! Find positions of nodes in a list without nodes which are only in the middle of edges
+        //! of second order elements. Such nodes have position RConstants::eod.
+        //! A mesh generator takes the model as if its elements were of the first order.
+        RUVector findCornerNodeBook(uint &nCornerNodes) const;
+
+        //! Convert first order elements to second order ones by adding a node in the middle of each edge,
+        //! one for all elements sharing it. Elements without a second order type are kept as they are.
+        //! Values of node variables at new nodes are interpolated from both ends of their edge.
+        //! Return number of added nodes.
+        uint convertToSecondOrder(void);
+
+        //! Set values of node variables at nodes in the middle of edges of second order elements
+        //! to the mean of values at both ends of their edge, which is the value a first order
+        //! element would interpolate there.
+        //! If variable types are given, only those variables are interpolated.
+        //! If an element mask is given, only nodes of elements set in it are interpolated.
+        void interpolateMidEdgeNodeValues(const std::vector<RVariableType> &variableTypes = std::vector<RVariableType>(),
+                                          const std::vector<bool> *pElementMask = nullptr);
+
         //! Generate patch surface.
         void generatePatchSurface(const std::vector<RPatchInput> &patchInput, RPatchBook &book) const;
 

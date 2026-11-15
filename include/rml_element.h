@@ -42,6 +42,7 @@ class RInterpolatedElement;
 #define R_ELEMENT_TYPE_IS_VOLUME(_type) \
 ( \
     _type == R_ELEMENT_TETRA1 || \
+    _type == R_ELEMENT_TETRA2 || \
     _type == R_ELEMENT_WEDGE1 || \
     _type == R_ELEMENT_HEXA1     \
 )
@@ -60,16 +61,17 @@ typedef enum _RElementType
     R_ELEMENT_NONE = 0,
     R_ELEMENT_POINT,
     R_ELEMENT_TRUSS1,
-    R_ELEMENT_TRUSS2, // Not implemented
+    R_ELEMENT_TRUSS2, // Two ends and a node in the middle
     R_ELEMENT_BEAM1, // Not implemented
     R_ELEMENT_BEAM2, // Not implemented
     R_ELEMENT_TRI1,
-    R_ELEMENT_TRI2, // Not implemented
+    R_ELEMENT_TRI2, // Three corners and nodes in the middle of edges 0-1, 1-2, 2-0
     R_ELEMENT_QUAD1,
     R_ELEMENT_QUAD2, // Not implemented
     R_ELEMENT_TETRA1,
     R_ELEMENT_WEDGE1, // Not implemented
     R_ELEMENT_HEXA1, // Not implemented
+    R_ELEMENT_TETRA2, // Four corners and nodes in the middle of edges 0-1, 1-2, 2-0, 0-3, 1-3, 2-3
     R_ELEMENT_N_TYPES
 } RElementType;
 
@@ -322,6 +324,32 @@ class RElement
         //! Return number of possible neighbors for given element type.
         static unsigned int getNNeighbors ( RElementType type );
 
+        //! Return order of given element type: 2 for elements with nodes in the middle of edges, 1 otherwise.
+        static unsigned int getOrder ( RElementType type );
+
+        //! Return type of the first order element with the same corner nodes.
+        //! Type of a first order element is returned as it is.
+        static RElementType getLinearType ( RElementType type );
+
+        //! Return type of the second order element with the same corner nodes, R_ELEMENT_NONE if there is none.
+        //! Type of a second order element is returned as it is.
+        static RElementType getQuadraticType ( RElementType type );
+
+        //! Return number of corner nodes for given element type.
+        //! Corner nodes are the first nodes of an element, nodes in the middle of edges follow them.
+        static unsigned int getNCornerNodes ( RElementType type );
+
+        //! Return number of edges for given element type which have a node in the middle.
+        static unsigned int getNMidEdgeNodes ( RElementType type );
+
+        //! Return positions of both corner nodes of an edge which has given mid-edge node.
+        //! Position of the mid-edge node is counted from the first one (0 is the node which follows the last corner node).
+        static void getMidEdgeNodeCorners ( RElementType type, unsigned int midEdgePosition, unsigned int &corner1, unsigned int &corner2 );
+
+        //! Return first order element with the same corner nodes.
+        //! Edges of second order elements are straight, so it has the same shape.
+        RElement getLinearElement ( void ) const;
+
         //! Return newly generated shape function information for given element type.
         static std::vector<RElementShapeFunction> generateShapeFunctionValues ( RElementType type );
 
@@ -340,6 +368,10 @@ class RElement
         //! Return shape function information for given element type.
         static const RElementShapeFunction & getShapeFunction ( RElementType type, unsigned int point );
 
+        //! Return newly generated shape function values and their derivatives at a node of given element type.
+        //! Its weight is zero. Supported are lines, triangles and tetrahedra of both orders.
+        static RElementShapeFunction generateNodeShapeFunction ( RElementType type, unsigned int nodePosition );
+
         //! Return Mass matrix for given element type.
         static const RRMatrix & getMassMatrix ( RElementType type );
 
@@ -356,6 +388,12 @@ class RElement
         static bool findIntersectionPoints(const RElement &e1, const RElement &e2, const std::vector<RNode> &nodes, QList<RR3Vector> &x, bool testOnly = false);
 
     private:
+
+        //! Find weights of element nodes at given point.
+        void findInterpolationRatios( const std::vector <RNode> &nodes,
+                                      const RNode &interpolatedNode,
+                                      const RRVector &volumes,
+                                      RRVector &ratios ) const;
 
         //! Check if given node is inside the element.
         bool isInsideBoundingBox( const std::vector <RNode> &nodes,

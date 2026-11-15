@@ -48,6 +48,7 @@ void RMeshGenerator::generateRange(const RMeshInput &meshInput, RModel &model)
     options.setVolumeConstraint(meshInput.getVolumeConstraint());
     options.setUseSizeFunction(meshInput.getUseSizeFunction());
     options.setTolerance(meshInput.getTolerance());
+    options.setElementOrder(int(meshInput.getElementOrder()));
 
     // Generate 3D mesh.
     try

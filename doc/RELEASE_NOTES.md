@@ -1,3 +1,22 @@
+## Unreleased
+
+### New features
+
+#### Second order elements
+
+- **RElement** new type `R_ELEMENT_TETRA2` (10 nodes); `R_ELEMENT_TRI2` and
+  `R_ELEMENT_TRUSS2` are implemented. Shape functions are quadratic, geometry is
+  straight-sided and taken from corner nodes. New `getOrder()`, `getLinearType()`,
+  `getQuadraticType()`, `getNCornerNodes()`, `getNMidEdgeNodes()`,
+  `getMidEdgeNodeCorners()` and `getLinearElement()`
+- **RMeshInput** `getElementOrder()`, `setElementOrder()`; both mesh generators
+  produce second order elements and remesh second order models from their corner
+  nodes (TetGen with its `o2` switch)
+- **RModel** `findElementOrder()`, `findCornerNodeBook()`, `convertToSecondOrder()`
+  and `interpolateMidEdgeNodeValues()`
+
+---
+
 ## Version 1.4.0
 
 ### Improvements

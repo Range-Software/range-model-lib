@@ -175,8 +175,65 @@ static const RElementDesc elementDesc [] =
         RElement::generateMassVector(R_ELEMENT_HEXA1),
         RElement::generateTotalWeightFactor(R_ELEMENT_HEXA1),
         false
+    },
+    {
+        "elem-tetrahedron2",
+        "Tetrahedron2",
+        10,
+        4,
+        RElement::generateShapeFunctionValues(R_ELEMENT_TETRA2),
+        RElement::generateMassMatrix(R_ELEMENT_TETRA2),
+        RElement::generateMassVector(R_ELEMENT_TETRA2),
+        RElement::generateTotalWeightFactor(R_ELEMENT_TETRA2),
+        false
     }
 };
+
+//! Positions of corner nodes of each edge of a triangle, in order of its mid-edge nodes.
+static const uint triangleEdgeNodes[3][2] = {{0,1},{1,2},{2,0}};
+
+//! Positions of corner nodes of each edge of a tetrahedron, in order of its mid-edge nodes.
+static const uint tetrahedronEdgeNodes[6][2] = {{0,1},{1,2},{2,0},{0,3},{1,3},{2,3}};
+
+//! Positions of corner nodes of each face of a tetrahedron, the face is opposite to the node of the same position.
+static const uint tetrahedronFaceNodes[4][3] = {{1,3,2},{0,2,3},{0,3,1},{0,1,2}};
+
+//! Return position of a mid-edge node of a tetrahedron which lies between given corner nodes.
+static uint findTetrahedronMidEdgeNode(uint corner1, uint corner2)
+{
+    for (uint i=0;i<6;i++)
+    {
+        if ((tetrahedronEdgeNodes[i][0] == corner1 && tetrahedronEdgeNodes[i][1] == corner2) ||
+            (tetrahedronEdgeNodes[i][0] == corner2 && tetrahedronEdgeNodes[i][1] == corner1))
+        {
+            return 4 + i;
+        }
+    }
+    return RConstants::eod;
+}
+
+//! Change weights of corner nodes of a first order element to weights of all nodes of the second order one.
+static void toSecondOrderRatios(RElementType type, RRVector &ratios)
+{
+    const uint nc = RElement::getNCornerNodes(type);
+    const uint nm = RElement::getNMidEdgeNodes(type);
+    if (ratios.size() != nc)
+    {
+        return;
+    }
+    const RRVector L(ratios);
+    ratios.resize(nc+nm);
+    for (uint i=0;i<nc;i++)
+    {
+        ratios[i] = L[i] * (2.0 * L[i] - 1.0);
+    }
+    for (uint i=0;i<nm;i++)
+    {
+        uint c1, c2;
+        RElement::getMidEdgeNodeCorners(type,i,c1,c2);
+        ratios[nc+i] = 4.0 * L[c1] * L[c2];
+    }
+}
 
 
 RElement::RElement (RElementType type)
@@ -361,6 +418,11 @@ bool RElement::swapNormal(void)
         this->getType() == R_ELEMENT_TRI2)
     {
         std::swap(this->nodeIDs[0],this->nodeIDs[1]);
+        if (this->getType() == R_ELEMENT_TRI2)
+        {
+            // Edges 1-2 and 2-0 change places, edge 0-1 stays.
+            std::swap(this->nodeIDs[4],this->nodeIDs[5]);
+        }
     }
     else if (this->getType() == R_ELEMENT_QUAD1 ||
              this->getType() == R_ELEMENT_QUAD2)
@@ -565,7 +627,7 @@ bool RElement::findVolume(const std::vector<RNode> &nodes, double &volume) const
         return false;
     }
 
-    if (this->getType() == R_ELEMENT_TETRA1)
+    if (RElement::getLinearType(this->getType()) == R_ELEMENT_TETRA1)
     {
         const RNode &n1 = nodes[this->getNodeId(0)];
         const RNode &n2 = nodes[this->getNodeId(1)];
@@ -614,7 +676,7 @@ double RElement::findSize(const std::vector<RNode> &nodes) const
         double volume = 0.0;
         if (this->findVolume(nodes,volume))
         {
-            if (this->type == R_ELEMENT_TETRA1)
+            if (RElement::getLinearType(this->type) == R_ELEMENT_TETRA1)
             {
                 elementSize = std::pow(6.0 * volume / RConstants::pi, 1.0/3.0);
             }
@@ -701,6 +763,12 @@ bool RElement::findPickDistance(const std::vector<RNode> &nodes,
 
 RInterpolatedElement RElement::createInterpolatedElement(const RPlane &plane, const std::vector<RNode> &nodes, unsigned int elementID) const
 {
+    if (RElement::getOrder(this->getType()) == 2)
+    {
+        // Edges are straight, a plane cuts the element the same way as the first order one.
+        return this->getLinearElement().createInterpolatedElement(plane,nodes,elementID);
+    }
+
     RInterpolatedElement iElement;
 
     switch (this->getType())
@@ -804,6 +872,17 @@ RInterpolatedElement RElement::createInterpolatedElement(const RPlane &plane, co
 
 RInterpolatedElement RElement::createInterpolatedElement(double value, const std::vector<double> &nodeValues, const std::vector<RNode> &nodes, unsigned int elementID) const
 {
+    if (RElement::getOrder(this->getType()) == 2)
+    {
+        // Values are taken as linear between corner nodes.
+        const uint nc = RElement::getNCornerNodes(this->getType());
+        if (nodeValues.size() < nc)
+        {
+            return RInterpolatedElement();
+        }
+        return this->getLinearElement().createInterpolatedElement(value,std::vector<double>(nodeValues.begin(),nodeValues.begin()+nc),nodes,elementID);
+    }
+
     RInterpolatedElement iElement;
 
     bool isBigger = false;
@@ -979,6 +1058,11 @@ bool RElement::isInside(const std::vector<RNode> &nodes, const RNode &node) cons
 
 bool RElement::isInside(const std::vector<RNode> &nodes, const RNode &node, RRVector &volumes) const
 {
+    if (RElement::getOrder(this->getType()) == 2)
+    {
+        return this->getLinearElement().isInside(nodes,node,volumes);
+    }
+
     switch (this->getType())
     {
         case R_ELEMENT_POINT:
@@ -1158,6 +1242,13 @@ namespace
 
 double RElement::findClosestPoint(const std::vector<RNode> &nodes, const RNode &node, RRVector &ratios) const
 {
+    if (RElement::getOrder(this->getType()) == 2)
+    {
+        const double distance = this->getLinearElement().findClosestPoint(nodes,node,ratios);
+        toSecondOrderRatios(this->getType(),ratios);
+        return distance;
+    }
+
     const Point3 p = {node.getX(),node.getY(),node.getZ()};
 
     std::array<Point3,4> n;
@@ -1251,6 +1342,30 @@ double RElement::interpolate(const std::vector<RNode> &nodes,
                              const RRVector &volumes) const
 {
     RRVector ratios;
+    this->findInterpolationRatios(nodes,interpolatedNode,volumes,ratios);
+
+    double value = 0.0;
+
+    for (unsigned int i=0;i<ratios.size();i++)
+    {
+        value += ratios[i] * nodeValues[i];
+    }
+
+    return value;
+} /* RElement::interpolate */
+
+
+void RElement::findInterpolationRatios(const std::vector<RNode> &nodes,
+                                       const RNode &interpolatedNode,
+                                       const RRVector &volumes,
+                                       RRVector &ratios) const
+{
+    if (RElement::getOrder(this->getType()) == 2)
+    {
+        this->getLinearElement().findInterpolationRatios(nodes,interpolatedNode,volumes,ratios);
+        toSecondOrderRatios(this->getType(),ratios);
+        return;
+    }
 
     switch (this->getType())
     {
@@ -1325,16 +1440,7 @@ double RElement::interpolate(const std::vector<RNode> &nodes,
             break;
         }
     }
-
-    double value = 0.0;
-
-    for (unsigned int i=0;i<ratios.size();i++)
-    {
-        value += ratios[i] * nodeValues[i];
-    }
-
-    return value;
-} /* RElement::interpolate */
+} /* RElement::findInterpolationRatios */
 
 
 RRMatrix RElement::findTransformationMatrix(const std::vector<RNode> &nodes, RRMatrix &R, RRVector &t) const
@@ -1501,6 +1607,11 @@ unsigned int RElement::findIntersectedSide(const std::vector<RNode> &nodes,
                                            const RR3Vector &direction,
                                            RR3Vector &intersection) const
 {
+    if (RElement::getOrder(this->getType()) == 2)
+    {
+        return this->getLinearElement().findIntersectedSide(nodes,position,direction,intersection);
+    }
+
     switch (this->getType())
     {
         case R_ELEMENT_TETRA1:
@@ -1632,7 +1743,7 @@ QList<RTriangle> RElement::triangulate(const std::vector<RNode> &nodes) const
 
 uint RElement::getNEdgeElements(void) const
 {
-    switch (this->type)
+    switch (RElement::getLinearType(this->type))
     {
         case R_ELEMENT_TRUSS1:
         {
@@ -1664,6 +1775,44 @@ std::vector<RElement> RElement::generateEdgeElements(void) const
 
     switch (this->type)
     {
+        case R_ELEMENT_TRUSS2:
+        {
+            for (uint i=0;i<2;i++)
+            {
+                RElement e(R_ELEMENT_POINT);
+                e.setNodeId(0,this->getNodeId(i));
+                edgeElements.push_back(e);
+            }
+            break;
+        }
+        case R_ELEMENT_TRI2:
+        {
+            for (uint i=0;i<3;i++)
+            {
+                RElement e(R_ELEMENT_TRUSS2);
+                e.setNodeId(0,this->getNodeId(triangleEdgeNodes[i][0]));
+                e.setNodeId(1,this->getNodeId(triangleEdgeNodes[i][1]));
+                e.setNodeId(2,this->getNodeId(3+i));
+                edgeElements.push_back(e);
+            }
+            break;
+        }
+        case R_ELEMENT_TETRA2:
+        {
+            // Faces are the same as those of a first order tetrahedron, with nodes in the middle of their edges.
+            for (uint i=0;i<4;i++)
+            {
+                const uint *face = tetrahedronFaceNodes[i];
+                RElement e(R_ELEMENT_TRI2);
+                for (uint j=0;j<3;j++)
+                {
+                    e.setNodeId(j,this->getNodeId(face[j]));
+                    e.setNodeId(3+j,this->getNodeId(findTetrahedronMidEdgeNode(face[j],face[(j+1)%3])));
+                }
+                edgeElements.push_back(e);
+            }
+            break;
+        }
         case R_ELEMENT_TRUSS1:
         {
             RElement e1(R_ELEMENT_POINT);
@@ -1776,7 +1925,7 @@ bool RElement::isNeighbor(const RElement &rElement) const
     }
     else if (R_ELEMENT_TYPE_IS_VOLUME(this->getType()))
     {
-        if (this->getType() == R_ELEMENT_TETRA1)
+        if (RElement::getLinearType(this->getType()) == R_ELEMENT_TETRA1)
         {
             nNodesPerSide = 3;
         }
@@ -1790,12 +1939,19 @@ bool RElement::isNeighbor(const RElement &rElement) const
         return false;
     }
 
+    // Only corner nodes are counted, so that elements of both orders are found the same way.
+    const uint nCorners = RElement::getNCornerNodes(this->getType());
+    const uint nNeighborCorners = RElement::getNCornerNodes(rElement.getType());
     uint nFound = 0;
-    for (uint i=0;i<rElement.size();i++)
+    for (uint i=0;i<nNeighborCorners;i++)
     {
-        if (this->hasNodeId(rElement.getNodeId(i)))
+        for (uint j=0;j<nCorners;j++)
         {
-            nFound++;
+            if (this->getNodeId(j) == rElement.getNodeId(i))
+            {
+                nFound++;
+                break;
+            }
         }
     }
     if (nFound == nNodesPerSide)
@@ -1838,14 +1994,17 @@ unsigned int RElement::findEdgePositionForNeighborElement(const RElement &rEleme
 
 bool RElement::isNeighborNormalSync(const RElement &rElement) const
 {
-    for (uint i=0;i<this->size();i++)
+    // Direction of an element is given by its corner nodes.
+    const uint nc1 = RElement::getNCornerNodes(this->getType());
+    const uint nc2 = RElement::getNCornerNodes(rElement.getType());
+    for (uint i=0;i<nc1;i++)
     {
         uint n11 = this->getNodeId(i);
-        uint n12 = (i+1<this->size()) ? this->getNodeId(i+1) : this->getNodeId(0);
-        for (uint j=0;j<rElement.size();j++)
+        uint n12 = (i+1<nc1) ? this->getNodeId(i+1) : this->getNodeId(0);
+        for (uint j=0;j<nc2;j++)
         {
             uint n21 = rElement.getNodeId(j);
-            uint n22 = (j+1<rElement.size()) ? rElement.getNodeId(j+1) : rElement.getNodeId(0);
+            uint n22 = (j+1<nc2) ? rElement.getNodeId(j+1) : rElement.getNodeId(0);
 
             if (n11 == n22 && n12 == n21)
             {
@@ -1863,7 +2022,21 @@ bool RElement::isNeighborNormalSync(const RElement &rElement) const
 
 bool RElement::nodeIsOnEdge(uint nodePosition, uint edgePosition) const
 {
-    switch (this->type)
+    const uint nCorners = RElement::getNCornerNodes(this->type);
+    if (RElement::getOrder(this->type) == 2 && nodePosition >= nCorners)
+    {
+        // A mid-edge node is on an edge which has both of its corner nodes.
+        if (this->type == R_ELEMENT_TRUSS2 || nodePosition >= this->size())
+        {
+            return false;
+        }
+        uint c1, c2;
+        RElement::getMidEdgeNodeCorners(this->type,nodePosition-nCorners,c1,c2);
+        const RElement linearElement(this->getLinearElement());
+        return linearElement.nodeIsOnEdge(c1,edgePosition) && linearElement.nodeIsOnEdge(c2,edgePosition);
+    }
+
+    switch (RElement::getLinearType(this->type))
     {
         case R_ELEMENT_TRUSS1:
         {
@@ -2360,6 +2533,128 @@ unsigned int RElement::getNNeighbors(RElementType type)
 } /* RElement::getNNeighbors */
 
 
+unsigned int RElement::getOrder(RElementType type)
+{
+    return (type == R_ELEMENT_TRUSS2 || type == R_ELEMENT_BEAM2 || type == R_ELEMENT_TRI2 || type == R_ELEMENT_QUAD2 || type == R_ELEMENT_TETRA2) ? 2 : 1;
+} /* RElement::getOrder */
+
+
+RElementType RElement::getLinearType(RElementType type)
+{
+    switch (type)
+    {
+        case R_ELEMENT_TRUSS2: return R_ELEMENT_TRUSS1;
+        case R_ELEMENT_BEAM2:  return R_ELEMENT_BEAM1;
+        case R_ELEMENT_TRI2:   return R_ELEMENT_TRI1;
+        case R_ELEMENT_QUAD2:  return R_ELEMENT_QUAD1;
+        case R_ELEMENT_TETRA2: return R_ELEMENT_TETRA1;
+        default:               return type;
+    }
+} /* RElement::getLinearType */
+
+
+RElementType RElement::getQuadraticType(RElementType type)
+{
+    switch (type)
+    {
+        case R_ELEMENT_TRUSS1:
+        case R_ELEMENT_TRUSS2: return R_ELEMENT_TRUSS2;
+        case R_ELEMENT_TRI1:
+        case R_ELEMENT_TRI2:   return R_ELEMENT_TRI2;
+        case R_ELEMENT_TETRA1:
+        case R_ELEMENT_TETRA2: return R_ELEMENT_TETRA2;
+        default:               return R_ELEMENT_NONE;
+    }
+} /* RElement::getQuadraticType */
+
+
+unsigned int RElement::getNCornerNodes(RElementType type)
+{
+    return RElement::getNNodes(RElement::getLinearType(type));
+} /* RElement::getNCornerNodes */
+
+
+unsigned int RElement::getNMidEdgeNodes(RElementType type)
+{
+    switch (type)
+    {
+        case R_ELEMENT_TRUSS2: return 1;
+        case R_ELEMENT_TRI2:   return 3;
+        case R_ELEMENT_TETRA2: return 6;
+        default:               return 0;
+    }
+} /* RElement::getNMidEdgeNodes */
+
+
+void RElement::getMidEdgeNodeCorners(RElementType type, unsigned int midEdgePosition, unsigned int &corner1, unsigned int &corner2)
+{
+    R_ERROR_ASSERT (midEdgePosition < RElement::getNMidEdgeNodes(type));
+
+    switch (type)
+    {
+        case R_ELEMENT_TRI2:
+            corner1 = triangleEdgeNodes[midEdgePosition][0];
+            corner2 = triangleEdgeNodes[midEdgePosition][1];
+            break;
+        case R_ELEMENT_TETRA2:
+            corner1 = tetrahedronEdgeNodes[midEdgePosition][0];
+            corner2 = tetrahedronEdgeNodes[midEdgePosition][1];
+            break;
+        case R_ELEMENT_TRUSS2:
+        default:
+            corner1 = 0;
+            corner2 = 1;
+            break;
+    }
+} /* RElement::getMidEdgeNodeCorners */
+
+
+RElement RElement::getLinearElement(void) const
+{
+    RElement element(RElement::getLinearType(this->getType()));
+    for (unsigned int i=0;i<element.size();i++)
+    {
+        element.setNodeId(i,this->getNodeId(i));
+    }
+    return element;
+} /* RElement::getLinearElement */
+
+
+//! Add an integration point of a second order element, which shape functions are given by
+//! area (volume) coordinates L of the point and by their derivatives dL.
+static void addSecondOrderPoint(std::vector<RElementShapeFunction> &shapeFunctions,
+                                RElementType type,
+                                const std::vector<double> &L,
+                                const RRMatrix &dL,
+                                double w)
+{
+    const uint nc = uint(L.size());
+    const uint nm = RElement::getNMidEdgeNodes(type);
+    const uint nd = dL.getNColumns();
+    RRVector N(nc+nm);
+    RRMatrix dN(nc+nm,nd);
+    for (uint i=0;i<nc;i++)
+    {
+        N[i] = L[i] * (2.0 * L[i] - 1.0);
+        for (uint d=0;d<nd;d++)
+        {
+            dN[i][d] = (4.0 * L[i] - 1.0) * dL[i][d];
+        }
+    }
+    for (uint i=0;i<nm;i++)
+    {
+        uint c1, c2;
+        RElement::getMidEdgeNodeCorners(type,i,c1,c2);
+        N[nc+i] = 4.0 * L[c1] * L[c2];
+        for (uint d=0;d<nd;d++)
+        {
+            dN[nc+i][d] = 4.0 * (L[c1] * dL[c2][d] + L[c2] * dL[c1][d]);
+        }
+    }
+    shapeFunctions.push_back(RElementShapeFunction(N,dN,w));
+}
+
+
 std::vector<RElementShapeFunction> RElement::generateShapeFunctionValues(RElementType type)
 {
     R_ERROR_ASSERT (R_ELEMENT_TYPE_IS_VALID(type));
@@ -2391,7 +2686,21 @@ std::vector<RElementShapeFunction> RElement::generateShapeFunctionValues(RElemen
             shapeFunctions.push_back(RElementShapeFunction(N,dN,1.0));
             break;
         case R_ELEMENT_TRUSS2:
+        {
+            // Coordinate ksi goes from -1 to 1 as that of the first order element does,
+            // L are weights of both ends. Three points integrate polynomials of the fifth degree.
+            RRMatrix dL(2,1);
+            dL[0][0] = -0.5;
+            dL[1][0] =  0.5;
+            const double a = std::sqrt(0.6);
+            const double points[3] = {-a,0.0,a};
+            const double weights[3] = {5.0/9.0,8.0/9.0,5.0/9.0};
+            for (uint i=0;i<3;i++)
+            {
+                addSecondOrderPoint(shapeFunctions,type,{(1.0 - points[i])/2.0,(1.0 + points[i])/2.0},dL,weights[i]);
+            }
             break;
+        }
         case R_ELEMENT_BEAM1:
             break;
         case R_ELEMENT_BEAM2:
@@ -2429,7 +2738,25 @@ std::vector<RElementShapeFunction> RElement::generateShapeFunctionValues(RElemen
             shapeFunctions.push_back(RElementShapeFunction(N,dN,1.0/6.0));
             break;
         case R_ELEMENT_TRI2:
+        {
+            // Six points integrate polynomials of the fourth degree (D. A. Dunavant, 1985),
+            // which a mass matrix of a second order element is made of.
+            RRMatrix dL(3,2);
+            dL[0][0] = -1.0; dL[0][1] = -1.0;
+            dL[1][0] =  1.0; dL[1][1] =  0.0;
+            dL[2][0] =  0.0; dL[2][1] =  1.0;
+            const double a[2] = {0.445948490915965,0.091576213509771};
+            const double w[2] = {0.223381589678011,0.109951743655322};
+            for (uint i=0;i<2;i++)
+            {
+                const double b = 1.0 - 2.0 * a[i];
+                // Area of the reference triangle is one half.
+                addSecondOrderPoint(shapeFunctions,type,{b,a[i],a[i]},dL,w[i]/2.0);
+                addSecondOrderPoint(shapeFunctions,type,{a[i],b,a[i]},dL,w[i]/2.0);
+                addSecondOrderPoint(shapeFunctions,type,{a[i],a[i],b},dL,w[i]/2.0);
+            }
             break;
+        }
         case R_ELEMENT_QUAD1:
             N.resize(4);
             dN.resize(4,2);
@@ -2553,6 +2880,41 @@ std::vector<RElementShapeFunction> RElement::generateShapeFunctionValues(RElemen
             N[3] = zeta;
             shapeFunctions.push_back(RElementShapeFunction(N,dN,1.0/24.0));
             break;
+        case R_ELEMENT_TETRA2:
+        {
+            // Fourteen points with positive weights integrate polynomials of the fifth degree
+            // (N. J. Walkington, 2000), a mass matrix of a second order element needs the fourth.
+            RRMatrix dL(4,3);
+            dL[0][0] = -1.0; dL[0][1] = -1.0; dL[0][2] = -1.0;
+            dL[1][0] =  1.0; dL[1][1] =  0.0; dL[1][2] =  0.0;
+            dL[2][0] =  0.0; dL[2][1] =  1.0; dL[2][2] =  0.0;
+            dL[3][0] =  0.0; dL[3][1] =  0.0; dL[3][2] =  1.0;
+            const double a[2] = {0.31088591926330060980,0.09273525031089122640};
+            const double w[2] = {0.11268792571801585080,0.07349304311636194954};
+            // Volume of the reference tetrahedron is one sixth.
+            for (uint i=0;i<2;i++)
+            {
+                const double b = 1.0 - 3.0 * a[i];
+                for (uint j=0;j<4;j++)
+                {
+                    std::vector<double> L(4,a[i]);
+                    L[j] = b;
+                    addSecondOrderPoint(shapeFunctions,type,L,dL,w[i]/6.0);
+                }
+            }
+            const double c = 0.04550370412564964949;
+            const double wc = 0.04254602077708146644;
+            for (uint i=0;i<4;i++)
+            {
+                for (uint j=i+1;j<4;j++)
+                {
+                    std::vector<double> L(4,0.5 - c);
+                    L[i] = L[j] = c;
+                    addSecondOrderPoint(shapeFunctions,type,L,dL,wc/6.0);
+                }
+            }
+            break;
+        }
         case R_ELEMENT_WEDGE1:
             break;
         case R_ELEMENT_HEXA1:
@@ -2564,6 +2926,69 @@ std::vector<RElementShapeFunction> RElement::generateShapeFunctionValues(RElemen
 
     return shapeFunctions;
 } /* RElement::generateShapeFunctionValues */
+
+
+RElementShapeFunction RElement::generateNodeShapeFunction(RElementType type, unsigned int nodePosition)
+{
+    R_ERROR_ASSERT (nodePosition < RElement::getNNodes(type));
+
+    const RElementType linearType = RElement::getLinearType(type);
+    const uint nc = RElement::getNCornerNodes(type);
+
+    // Derivatives of area (volume) coordinates by natural coordinates, as in generateShapeFunctionValues().
+    RRMatrix dL;
+    switch (linearType)
+    {
+        case R_ELEMENT_TRUSS1:
+            dL.resize(2,1);
+            dL[0][0] = -0.5;
+            dL[1][0] =  0.5;
+            break;
+        case R_ELEMENT_TRI1:
+            dL.resize(3,2);
+            dL[0][0] = -1.0; dL[0][1] = -1.0;
+            dL[1][0] =  1.0; dL[1][1] =  0.0;
+            dL[2][0] =  0.0; dL[2][1] =  1.0;
+            break;
+        case R_ELEMENT_TETRA1:
+            dL.resize(4,3);
+            dL[0][0] = -1.0; dL[0][1] = -1.0; dL[0][2] = -1.0;
+            dL[1][0] =  1.0; dL[1][1] =  0.0; dL[1][2] =  0.0;
+            dL[2][0] =  0.0; dL[2][1] =  1.0; dL[2][2] =  0.0;
+            dL[3][0] =  0.0; dL[3][1] =  0.0; dL[3][2] =  1.0;
+            break;
+        default:
+            throw RError(RError::Type::Application,R_ERROR_REF,"Shape functions at nodes of element type \'%s\' are not available.",
+                         RElement::getName(type).toUtf8().constData());
+    }
+
+    // Area (volume) coordinates of the node.
+    std::vector<double> L(nc,0.0);
+    if (nodePosition < nc)
+    {
+        L[nodePosition] = 1.0;
+    }
+    else
+    {
+        uint c1, c2;
+        RElement::getMidEdgeNodeCorners(type,nodePosition-nc,c1,c2);
+        L[c1] = L[c2] = 0.5;
+    }
+
+    if (RElement::getOrder(type) == 2)
+    {
+        std::vector<RElementShapeFunction> shapeFunctions;
+        addSecondOrderPoint(shapeFunctions,type,L,dL,0.0);
+        return shapeFunctions.front();
+    }
+
+    RRVector N(nc);
+    for (uint i=0;i<nc;i++)
+    {
+        N[i] = L[i];
+    }
+    return RElementShapeFunction(N,dL,0.0);
+} /* RElement::generateNodeShapeFunction */
 
 
 RRMatrix RElement::generateMassMatrix(RElementType type)

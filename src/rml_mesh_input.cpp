@@ -17,6 +17,7 @@ void RMeshInput::_init(const RMeshInput *pMeshInput)
         this->tolerance = pMeshInput->tolerance;
         this->surfaceIntegrityCheck = pMeshInput->surfaceIntegrityCheck;
         this->keepResults = pMeshInput->keepResults;
+        this->elementOrder = pMeshInput->elementOrder;
         this->useTetGenInputParams = pMeshInput->useTetGenInputParams;
         this->tetGenInputParams = pMeshInput->tetGenInputParams;
     }
@@ -35,6 +36,7 @@ RMeshInput::RMeshInput() :
     tolerance(1.0e-10),
     surfaceIntegrityCheck(false),
     keepResults(true),
+    elementOrder(1),
     useTetGenInputParams(false),
     tetGenInputParams(QString())
 {
@@ -197,6 +199,16 @@ bool RMeshInput::getKeepResults(void) const
 void RMeshInput::setKeepResults(bool keepResults)
 {
     this->keepResults = keepResults;
+}
+
+uint RMeshInput::getElementOrder(void) const
+{
+    return this->elementOrder;
+}
+
+void RMeshInput::setElementOrder(uint elementOrder)
+{
+    this->elementOrder = elementOrder < 2 ? 1 : 2;
 }
 
 bool RMeshInput::getUseTetGenInputParams(void) const

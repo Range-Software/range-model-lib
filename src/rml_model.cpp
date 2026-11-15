@@ -4,6 +4,7 @@
 #include <set>
 #include <map>
 #include <algorithm>
+#include <unordered_map>
 #include <float.h>
 
 #include <rbl_error.h>
@@ -601,7 +602,7 @@ void RModel::exportTo (RModelMsh &modelMsh) const
             elementIDs[i] = nf;
             nf++;
         }
-        else if (pElement->getType() == R_ELEMENT_TETRA1)
+        else if (RElement::getLinearType(pElement->getType()) == R_ELEMENT_TETRA1)
         {
             elementIDs[i] = nb;
             nb++;
@@ -752,7 +753,7 @@ void RModel::exportTo (RModelMsh &modelMsh) const
         {
             elementID = pVolume->get(j);
             pElement = this->getElementPtr(elementID);
-            if (pElement->getType() == R_ELEMENT_TETRA1)
+            if (RElement::getLinearType(pElement->getType()) == R_ELEMENT_TETRA1)
             {
                 modelMsh.bodiesAll[elementIDs[elementID]][0] = int(pElement->getNodeId(0));
                 modelMsh.bodiesAll[elementIDs[elementID]][1] = int(pElement->getNodeId(1));
@@ -5658,6 +5659,7 @@ const std::vector<uint> *RModel::getNeighborIDs(uint elementID) const
             return &this->surfaceNeigs[elementID];
         }
         case R_ELEMENT_TETRA1:
+        case R_ELEMENT_TETRA2:
         {
             if (this->volumeNeigs.size() != this->getNElements())
             {
@@ -5715,9 +5717,11 @@ uint RModel::fixSliverElements(double edgeRatio)
         bool firstTime = true;
         uint n1 = RConstants::eod;
         uint n2 = RConstants::eod;
-        for (uint j=0;j<rElement.size();j++)
+        // Shape of an element is given by its corner nodes, nodes in the middle of edges would halve the shortest one.
+        const uint nCorners = RElement::getNCornerNodes(rElement.getType());
+        for (uint j=0;j<nCorners;j++)
         {
-            for (uint k=j+1;k<rElement.size();k++)
+            for (uint k=j+1;k<nCorners;k++)
             {
                 double distance = this->nodes[rElement.getNodeId(j)].getDistance(this->nodes[rElement.getNodeId(k)]);
                 if (firstTime)
@@ -5920,9 +5924,11 @@ QList<uint> RModel::findSliverElements(double edgeRatio) const
         bool firstTime = true;
         uint n1 = RConstants::eod;
         uint n2 = RConstants::eod;
-        for (uint j=0;j<rElement.size();j++)
+        // Shape of an element is given by its corner nodes, nodes in the middle of edges would halve the shortest one.
+        const uint nCorners = RElement::getNCornerNodes(rElement.getType());
+        for (uint j=0;j<nCorners;j++)
         {
-            for (uint k=j+1;k<rElement.size();k++)
+            for (uint k=j+1;k<nCorners;k++)
             {
                 double distance = this->nodes[rElement.getNodeId(j)].getDistance(this->nodes[rElement.getNodeId(k)]);
                 if (firstTime)
@@ -7062,8 +7068,157 @@ QString RModel::generateMeshTetGenInputParams(const RMeshInput &meshInput) const
     {
         parameters += "Y";
     }
+    if (meshInput.getElementOrder() == 2)
+    {
+        parameters += "o2";
+    }
     return parameters;
 } /* RModel::generateMeshTetGenInputParams */
+
+
+uint RModel::findElementOrder(void) const
+{
+    for (const RElement &rElement : this->elements)
+    {
+        if (RElement::getOrder(rElement.getType()) == 2)
+        {
+            return 2;
+        }
+    }
+    return 1;
+} /* RModel::findElementOrder */
+
+
+RUVector RModel::findCornerNodeBook(uint &nCornerNodes) const
+{
+    // Nodes which are in the middle of an edge of an element and in a corner of none.
+    std::vector<bool> isMidEdgeNode(this->getNNodes(),false);
+    for (const RElement &rElement : this->elements)
+    {
+        for (uint i=RElement::getNCornerNodes(rElement.getType());i<rElement.size();i++)
+        {
+            isMidEdgeNode[rElement.getNodeId(i)] = true;
+        }
+    }
+    for (const RElement &rElement : this->elements)
+    {
+        const uint nc = std::min(rElement.size(),RElement::getNCornerNodes(rElement.getType()));
+        for (uint i=0;i<nc;i++)
+        {
+            isMidEdgeNode[rElement.getNodeId(i)] = false;
+        }
+    }
+
+    RUVector nodeBook(this->getNNodes());
+    nCornerNodes = 0;
+    for (uint i=0;i<this->getNNodes();i++)
+    {
+        nodeBook[i] = isMidEdgeNode[i] ? RConstants::eod : nCornerNodes++;
+    }
+    return nodeBook;
+} /* RModel::findCornerNodeBook */
+
+
+uint RModel::convertToSecondOrder(void)
+{
+    const uint nOldNodes = this->getNNodes();
+
+    std::unordered_map<uint64_t,uint> edgeNodes;
+    auto findEdgeKey = [](uint node1, uint node2) -> uint64_t
+    {
+        return (uint64_t(std::min(node1,node2)) << 32) | uint64_t(std::max(node1,node2));
+    };
+
+    for (uint i=0;i<this->getNElements();i++)
+    {
+        const RElement &rElement = this->getElement(i);
+        const RElementType quadraticType = RElement::getQuadraticType(rElement.getType());
+        if (quadraticType == R_ELEMENT_NONE || quadraticType == rElement.getType())
+        {
+            continue;
+        }
+        RElement element(quadraticType);
+        const uint nc = RElement::getNCornerNodes(quadraticType);
+        for (uint j=0;j<nc;j++)
+        {
+            element.setNodeId(j,rElement.getNodeId(j));
+        }
+        for (uint j=0;j<RElement::getNMidEdgeNodes(quadraticType);j++)
+        {
+            uint c1, c2;
+            RElement::getMidEdgeNodeCorners(quadraticType,j,c1,c2);
+            const uint n1 = element.getNodeId(c1);
+            const uint n2 = element.getNodeId(c2);
+            auto iter = edgeNodes.find(findEdgeKey(n1,n2));
+            if (iter == edgeNodes.end())
+            {
+                const RNode &a = this->getNode(n1);
+                const RNode &b = this->getNode(n2);
+                this->addNode(RNode(0.5*(a.getX()+b.getX()),0.5*(a.getY()+b.getY()),0.5*(a.getZ()+b.getZ())));
+                iter = edgeNodes.emplace(findEdgeKey(n1,n2),this->getNNodes()-1).first;
+            }
+            element.setNodeId(nc+j,iter->second);
+        }
+        // Element keeps its group, its kind does not change.
+        this->elements[i] = element;
+    }
+
+    this->interpolateMidEdgeNodeValues();
+
+    return this->getNNodes() - nOldNodes;
+} /* RModel::convertToSecondOrder */
+
+
+void RModel::interpolateMidEdgeNodeValues(const std::vector<RVariableType> &variableTypes, const std::vector<bool> *pElementMask)
+{
+    // Corner nodes of the edge of each node in the middle of one.
+    std::vector<std::pair<uint,uint>> edgeCorners(this->getNNodes(),{RConstants::eod,RConstants::eod});
+    bool found = false;
+    for (uint i=0;i<this->getNElements();i++)
+    {
+        if (pElementMask && (i >= pElementMask->size() || !(*pElementMask)[i]))
+        {
+            continue;
+        }
+        const RElement &rElement = this->elements[i];
+        const uint nc = RElement::getNCornerNodes(rElement.getType());
+        for (uint j=0;j<RElement::getNMidEdgeNodes(rElement.getType());j++)
+        {
+            uint c1, c2;
+            RElement::getMidEdgeNodeCorners(rElement.getType(),j,c1,c2);
+            edgeCorners[rElement.getNodeId(nc+j)] = {rElement.getNodeId(c1),rElement.getNodeId(c2)};
+            found = true;
+        }
+    }
+    if (!found)
+    {
+        return;
+    }
+
+    for (uint i=0;i<this->getNVariables();i++)
+    {
+        RVariable &rVariable = this->getVariable(i);
+        if (rVariable.getApplyType() != R_VARIABLE_APPLY_NODE || rVariable.getNValues() != this->getNNodes())
+        {
+            continue;
+        }
+        if (!variableTypes.empty() && std::find(variableTypes.begin(),variableTypes.end(),rVariable.getType()) == variableTypes.end())
+        {
+            continue;
+        }
+        for (uint j=0;j<this->getNNodes();j++)
+        {
+            if (edgeCorners[j].first == RConstants::eod)
+            {
+                continue;
+            }
+            for (uint k=0;k<rVariable.getNVectors();k++)
+            {
+                rVariable.setValue(k,j,0.5*(rVariable.getValue(k,edgeCorners[j].first) + rVariable.getValue(k,edgeCorners[j].second)));
+            }
+        }
+    }
+} /* RModel::interpolateMidEdgeNodeValues */
 
 
 void RModel::generatePatchSurface(const std::vector<RPatchInput> &patchInput, RPatchBook &book) const

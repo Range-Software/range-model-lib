@@ -46,6 +46,8 @@ class RMeshInput
         bool surfaceIntegrityCheck;
         //! Keep results after mesh generation is done.
         bool keepResults;
+        //! Order of generated elements: 1 for linear, 2 for quadratic with nodes in the middle of edges.
+        uint elementOrder;
 
         //! Use provided TetGen mesh input line directly.
         bool useTetGenInputParams;
@@ -151,6 +153,13 @@ class RMeshInput
 
         //! Set whether results should be kept.
         void setKeepResults(bool keepResults);
+
+        //! Return order of generated elements.
+        uint getElementOrder(void) const;
+
+        //! Set order of generated elements, 1 (linear) or 2 (quadratic).
+        //! Any other order is taken as the closest one of them.
+        void setElementOrder(uint elementOrder);
 
         //! Return whether to use TetGen input parameters directly.
         bool getUseTetGenInputParams(void) const;

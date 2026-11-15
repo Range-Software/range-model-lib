@@ -1,7 +1,9 @@
 #include <cmath>
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <limits>
+#include <unordered_map>
 #include <vector>
 
 #include <rbl_error.h>
@@ -42,8 +44,17 @@ void RTetGen::importModel(const RModel &model, bool reconstruct, const RRVector 
     this->firstnumber = 0;
 
     // Set nodes
+    // Nodes in the middle of edges of second order elements are left out: the mesh is
+    // generated from corner nodes and TetGen adds new nodes to the middle of its edges.
 
-    this->numberofpoints = int(model.getNNodes());
+    uint nCornerNodes = 0;
+    const RUVector nodeBook = model.findCornerNodeBook(nCornerNodes);
+    auto findNode = [&](const RElement &rElement, uint position) -> int
+    {
+        return int(nodeBook[rElement.getNodeId(position)]) + this->firstnumber;
+    };
+
+    this->numberofpoints = int(nCornerNodes);
     this->numberofpointattributes = 0;
     this->numberofpointmtrs = nodeMeshSizeValues.size() == model.getNNodes() ? 1 : 0;
 
@@ -60,11 +71,16 @@ void RTetGen::importModel(const RModel &model, bool reconstruct, const RRVector 
         }
         this->pointmarkerlist = new int [uint(this->numberofpoints)];
 
-        for (uint i=0;i<uint(this->numberofpoints);i++)
+        for (uint nodeID=0;nodeID<model.getNNodes();nodeID++)
         {
-            this->pointlist[3*i+0] = REAL(model.getNode(i).getX());
-            this->pointlist[3*i+1] = REAL(model.getNode(i).getY());
-            this->pointlist[3*i+2] = REAL(model.getNode(i).getZ());
+            if (nodeBook[nodeID] == RConstants::eod)
+            {
+                continue;
+            }
+            const uint i = nodeBook[nodeID];
+            this->pointlist[3*i+0] = REAL(model.getNode(nodeID).getX());
+            this->pointlist[3*i+1] = REAL(model.getNode(nodeID).getY());
+            this->pointlist[3*i+2] = REAL(model.getNode(nodeID).getZ());
 //            if (this->numberofpointattributes)
 //            {
 //                this->pointattributelist[this->numberofpointattributes*i+0] = REAL(i);
@@ -75,7 +91,7 @@ void RTetGen::importModel(const RModel &model, bool reconstruct, const RRVector 
 //            }
             if (this->numberofpointmtrs)
             {
-                this->pointmtrlist[uint(this->numberofpointmtrs)*i+0] = nodeMeshSizeValues[i];
+                this->pointmtrlist[uint(this->numberofpointmtrs)*i+0] = nodeMeshSizeValues[nodeID];
                 for (uint j=1;j<uint(this->numberofpointmtrs);j++)
                 {
                     this->pointmtrlist[uint(this->numberofpointmtrs)*i+j] = 0.0;
@@ -93,7 +109,7 @@ void RTetGen::importModel(const RModel &model, bool reconstruct, const RRVector 
         {
             // TetGen copies node markers of input nodes to output and marks Steiner nodes
             // with markers of their facets or segments, which are never positive.
-            this->pointmarkerlist[model.getElement(rPoint.get(j)).getNodeId(0)] = marker;
+            this->pointmarkerlist[findNode(model.getElement(rPoint.get(j)),0) - this->firstnumber] = marker;
         }
     }
 
@@ -111,8 +127,8 @@ void RTetGen::importModel(const RModel &model, bool reconstruct, const RRVector 
             {
                 uint elementID = rLine.get(j);
                 const RElement &rElement = model.getElement(elementID);
-                this->edgelist[2*edgeNumber+0] = int(rElement.getNodeId(0)) + this->firstnumber;
-                this->edgelist[2*edgeNumber+1] = int(rElement.getNodeId(1)) + this->firstnumber;
+                this->edgelist[2*edgeNumber+0] = findNode(rElement,0);
+                this->edgelist[2*edgeNumber+1] = findNode(rElement,1);
                 this->edgemarkerlist[edgeNumber] = marker;
                 edgeNumber++;
             }
@@ -141,9 +157,9 @@ void RTetGen::importModel(const RModel &model, bool reconstruct, const RRVector 
                 {
                     continue;
                 }
-                this->trifacelist[3*ce+0] = int(model.getElement(i).getNodeId(0)) + this->firstnumber;
-                this->trifacelist[3*ce+1] = int(model.getElement(i).getNodeId(1)) + this->firstnumber;
-                this->trifacelist[3*ce+2] = int(model.getElement(i).getNodeId(2)) + this->firstnumber;
+                this->trifacelist[3*ce+0] = findNode(model.getElement(i),0);
+                this->trifacelist[3*ce+1] = findNode(model.getElement(i),1);
+                this->trifacelist[3*ce+2] = findNode(model.getElement(i),2);
 
                 this->trifacemarkerlist[ce] = -1;
 
@@ -168,7 +184,7 @@ void RTetGen::importModel(const RModel &model, bool reconstruct, const RRVector 
 
         // Set tetrahedras
 
-        this->numberoftetrahedra = int(model.getNElements(R_ELEMENT_TETRA1));
+        this->numberoftetrahedra = int(model.getNElements(R_ELEMENT_TETRA1) + model.getNElements(R_ELEMENT_TETRA2));
 
         if (this->numberoftetrahedra)
         {
@@ -184,14 +200,14 @@ void RTetGen::importModel(const RModel &model, bool reconstruct, const RRVector 
             uint ce = 0;
             for (uint i=0;i<model.getNElements();i++)
             {
-                if (model.getElement(i).getType() != R_ELEMENT_TETRA1)
+                if (RElement::getLinearType(model.getElement(i).getType()) != R_ELEMENT_TETRA1)
                 {
                     continue;
                 }
-                this->tetrahedronlist[4*ce+0] = int(model.getElement(i).getNodeId(0)) + this->firstnumber;
-                this->tetrahedronlist[4*ce+1] = int(model.getElement(i).getNodeId(1)) + this->firstnumber;
-                this->tetrahedronlist[4*ce+2] = int(model.getElement(i).getNodeId(2)) + this->firstnumber;
-                this->tetrahedronlist[4*ce+3] = int(model.getElement(i).getNodeId(3)) + this->firstnumber;
+                this->tetrahedronlist[4*ce+0] = findNode(model.getElement(i),0);
+                this->tetrahedronlist[4*ce+1] = findNode(model.getElement(i),1);
+                this->tetrahedronlist[4*ce+2] = findNode(model.getElement(i),2);
+                this->tetrahedronlist[4*ce+3] = findNode(model.getElement(i),3);
 
                 this->tetrahedronattributelist[uint(this->numberoftetrahedronattributes)*ce+0] = 0.0;
 
@@ -259,7 +275,7 @@ void RTetGen::importModel(const RModel &model, bool reconstruct, const RRVector 
                 this->facetlist[ce].polygonlist[0].vertexlist = new int[nne];
                 for (uint j=0;j<nne;j++)
                 {
-                    this->facetlist[ce].polygonlist[0].vertexlist[j] = int(model.getElement(i).getNodeId(j)) + this->firstnumber;
+                    this->facetlist[ce].polygonlist[0].vertexlist[j] = findNode(model.getElement(i),j);
                 }
 
                 this->facetmarkerlist[ce] = 0;
@@ -287,13 +303,85 @@ void RTetGen::importModel(const RModel &model, bool reconstruct, const RRVector 
 
 void RTetGen::exportMesh(RModel &model, bool keepResults) const
 {
+    // Second order tetrahedra have ten nodes: four corners and six nodes in the middle of edges.
+    const uint nc = uint(this->numberofcorners);
+    const bool secondOrder = this->numberoftetrahedra > 0 && nc == 10;
+    if (this->numberoftetrahedra > 0 && nc != 4 && nc != 10)
+    {
+        throw RError(RError::Type::Application,R_ERROR_REF,"Generated tetrahedra have unsupported number of nodes (%u).",nc);
+    }
+
+    // Node in the middle of each edge. The edge of a node is found from its coordinates,
+    // so that it does not depend on order in which TetGen lists nodes of a tetrahedron.
+    std::unordered_map<uint64_t,uint> edgeNodes;
+    std::vector<bool> isMidEdgeNode(size_t(this->numberofpoints),false);
+    auto findEdgeKey = [](uint node1, uint node2) -> uint64_t
+    {
+        return (uint64_t(std::min(node1,node2)) << 32) | uint64_t(std::max(node1,node2));
+    };
+    if (secondOrder)
+    {
+        edgeNodes.reserve(size_t(this->numberoftetrahedra) * 2);
+        for (uint i=0;i<uint(this->numberoftetrahedra);i++)
+        {
+            const int *pNodes = &this->tetrahedronlist[nc*i];
+            bool edgeUsed[6] = {false,false,false,false,false,false};
+            for (uint j=4;j<10;j++)
+            {
+                const uint midNode = uint(pNodes[j] - this->firstnumber);
+                double minDistance = std::numeric_limits<double>::max();
+                uint edge = 0;
+                for (uint k=0;k<6;k++)
+                {
+                    if (edgeUsed[k])
+                    {
+                        continue;
+                    }
+                    uint c1, c2;
+                    RElement::getMidEdgeNodeCorners(R_ELEMENT_TETRA2,k,c1,c2);
+                    const uint n1 = uint(pNodes[c1] - this->firstnumber);
+                    const uint n2 = uint(pNodes[c2] - this->firstnumber);
+                    double distance = 0.0;
+                    for (uint d=0;d<3;d++)
+                    {
+                        distance += std::pow(this->pointlist[3*midNode+d] - 0.5*(this->pointlist[3*n1+d] + this->pointlist[3*n2+d]),2);
+                    }
+                    if (distance < minDistance)
+                    {
+                        minDistance = distance;
+                        edge = k;
+                    }
+                }
+                edgeUsed[edge] = true;
+                uint c1, c2;
+                RElement::getMidEdgeNodeCorners(R_ELEMENT_TETRA2,edge,c1,c2);
+                edgeNodes[findEdgeKey(uint(pNodes[c1] - this->firstnumber),uint(pNodes[c2] - this->firstnumber))] = midNode;
+                isMidEdgeNode[midNode] = true;
+            }
+        }
+    }
+    auto findMidEdgeNode = [&](uint node1, uint node2) -> uint
+    {
+        auto iter = edgeNodes.find(findEdgeKey(node1,node2));
+        if (iter == edgeNodes.end())
+        {
+            throw RError(RError::Type::Application,R_ERROR_REF,"Generated mesh has no node in the middle of an edge (%u, %u).",node1,node2);
+        }
+        return iter->second;
+    };
+    // A node in the middle of an edge is never a point of the model.
+    auto isPointNode = [&](uint nodeID) -> bool
+    {
+        return this->pointmarkerlist[nodeID] > 0 && !isMidEdgeNode[nodeID];
+    };
+
     // Find number of point elements.
     uint numberOfPointElements = 0;
     if (this->pointmarkerlist)
     {
         for (int i=0;i<this->numberofpoints;i++)
         {
-            if (this->pointmarkerlist[i] > 0)
+            if (isPointNode(uint(i)))
             {
                 numberOfPointElements++;
             }
@@ -332,7 +420,7 @@ void RTetGen::exportMesh(RModel &model, bool keepResults) const
         {
             for (int i=0;i<this->numberofpoints;i++)
             {
-                if (this->pointmarkerlist[i] > 0)
+                if (isPointNode(uint(i)))
                 {
                     elements.push_back({{uint(i),0,0,0},1,R_ENTITY_GROUP_POINT});
                 }
@@ -357,10 +445,10 @@ void RTetGen::exportMesh(RModel &model, bool keepResults) const
         }
         for (int i=0;i<this->numberoftetrahedra;i++)
         {
-            elements.push_back({{uint(this->tetrahedronlist[4*i+0] - this->firstnumber),
-                                 uint(this->tetrahedronlist[4*i+1] - this->firstnumber),
-                                 uint(this->tetrahedronlist[4*i+2] - this->firstnumber),
-                                 uint(this->tetrahedronlist[4*i+3] - this->firstnumber)},4,R_ENTITY_GROUP_VOLUME});
+            elements.push_back({{uint(this->tetrahedronlist[nc*uint(i)+0] - this->firstnumber),
+                                 uint(this->tetrahedronlist[nc*uint(i)+1] - this->firstnumber),
+                                 uint(this->tetrahedronlist[nc*uint(i)+2] - this->firstnumber),
+                                 uint(this->tetrahedronlist[nc*uint(i)+3] - this->firstnumber)},4,R_ENTITY_GROUP_VOLUME});
         }
 
         variables = RMeshResultsInterpolator::interpolate(model,nodes,elements);
@@ -398,7 +486,7 @@ void RTetGen::exportMesh(RModel &model, bool keepResults) const
     {
         for (uint i=0;i<uint(this->numberofpoints);i++)
         {
-            if (this->pointmarkerlist[i] > 0)
+            if (isPointNode(i))
             {
                 RElement element(R_ELEMENT_POINT);
 
@@ -428,11 +516,15 @@ void RTetGen::exportMesh(RModel &model, bool keepResults) const
         {
             if (isLineEdgeMarker(this->edgemarkerlist[i]))
             {
-                RElement element(R_ELEMENT_TRUSS1);
+                RElement element(secondOrder ? R_ELEMENT_TRUSS2 : R_ELEMENT_TRUSS1);
 
                 // Line element normals are swapped
                 element.setNodeId(0,uint(this->edgelist[2*i+0] - this->firstnumber));
                 element.setNodeId(1,uint(this->edgelist[2*i+1] - this->firstnumber));
+                if (secondOrder)
+                {
+                    element.setNodeId(2,findMidEdgeNode(element.getNodeId(0),element.getNodeId(1)));
+                }
 
                 model.setElement(nElements,element,false);
 
@@ -454,12 +546,21 @@ void RTetGen::exportMesh(RModel &model, bool keepResults) const
     }
     for (uint i=0;i<uint(this->numberoftrifaces);i++)
     {
-        RElement element(R_ELEMENT_TRI1);
+        RElement element(secondOrder ? R_ELEMENT_TRI2 : R_ELEMENT_TRI1);
 
         // Triangle element normals are swapped
         element.setNodeId(0,uint(this->trifacelist[3*i+0] - this->firstnumber));
         element.setNodeId(1,uint(this->trifacelist[3*i+2] - this->firstnumber));
         element.setNodeId(2,uint(this->trifacelist[3*i+1] - this->firstnumber));
+        if (secondOrder)
+        {
+            for (uint j=0;j<3;j++)
+            {
+                uint c1, c2;
+                RElement::getMidEdgeNodeCorners(R_ELEMENT_TRI2,j,c1,c2);
+                element.setNodeId(3+j,findMidEdgeNode(element.getNodeId(c1),element.getNodeId(c2)));
+            }
+        }
 
         model.setElement(nElements,element,false);
         uint marker = this->trifacemarkerlist ? uint(std::abs(this->trifacemarkerlist[i])) - 1 : 0;
@@ -519,12 +620,21 @@ void RTetGen::exportMesh(RModel &model, bool keepResults) const
     // VOLUME NEIGHBORS
     for (uint i=0;i<uint(this->numberoftetrahedra);i++)
     {
-        RElement element(R_ELEMENT_TETRA1);
+        RElement element(secondOrder ? R_ELEMENT_TETRA2 : R_ELEMENT_TETRA1);
 
-        element.setNodeId(0,uint(this->tetrahedronlist[4*i+0] - this->firstnumber));
-        element.setNodeId(1,uint(this->tetrahedronlist[4*i+1] - this->firstnumber));
-        element.setNodeId(2,uint(this->tetrahedronlist[4*i+2] - this->firstnumber));
-        element.setNodeId(3,uint(this->tetrahedronlist[4*i+3] - this->firstnumber));
+        element.setNodeId(0,uint(this->tetrahedronlist[nc*i+0] - this->firstnumber));
+        element.setNodeId(1,uint(this->tetrahedronlist[nc*i+1] - this->firstnumber));
+        element.setNodeId(2,uint(this->tetrahedronlist[nc*i+2] - this->firstnumber));
+        element.setNodeId(3,uint(this->tetrahedronlist[nc*i+3] - this->firstnumber));
+        if (secondOrder)
+        {
+            for (uint j=0;j<6;j++)
+            {
+                uint c1, c2;
+                RElement::getMidEdgeNodeCorners(R_ELEMENT_TETRA2,j,c1,c2);
+                element.setNodeId(4+j,findMidEdgeNode(element.getNodeId(c1),element.getNodeId(c2)));
+            }
+        }
 
         model.setElement(nElements,element,false);
         model.getVolume(tetrahedraVolumeMarker[i]).add(nElements);

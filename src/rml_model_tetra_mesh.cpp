@@ -17,15 +17,29 @@ void RModelTetraMesh::importModel(const RModel &model, bool reconstruct, const R
     this->clear();
 
     // Nodes
+    // Nodes in the middle of edges of second order elements are left out: the mesh is
+    // generated from corner nodes and new nodes are added to the middle of its edges.
 
     const bool useMeshSizes = nodeMeshSizeValues.size() == model.getNNodes();
 
-    this->nodes.reserve(model.getNNodes());
+    uint nCornerNodes = 0;
+    const RUVector nodeBook = model.findCornerNodeBook(nCornerNodes);
+
+    this->nodes.reserve(nCornerNodes);
     for (uint i=0;i<model.getNNodes();i++)
     {
+        if (nodeBook[i] == RConstants::eod)
+        {
+            continue;
+        }
         const RNode &rNode = model.getNode(i);
         this->addNode(rNode.getX(),rNode.getY(),rNode.getZ(),noMarker,useMeshSizes ? nodeMeshSizeValues[i] : 0.0);
     }
+
+    auto findNode = [&](const RElement &rElement, uint position) -> int
+    {
+        return int(nodeBook[rElement.getNodeId(position)]);
+    };
 
     // Points
 
@@ -34,7 +48,7 @@ void RModelTetraMesh::importModel(const RModel &model, bool reconstruct, const R
         const RPoint &rPoint = model.getPoint(i);
         for (uint j=0;j<rPoint.size();j++)
         {
-            this->nodes[model.getElement(rPoint.get(j)).getNodeId(0)].marker = int(i);
+            this->nodes[size_t(findNode(model.getElement(rPoint.get(j)),0))].marker = int(i);
         }
     }
 
@@ -46,7 +60,7 @@ void RModelTetraMesh::importModel(const RModel &model, bool reconstruct, const R
         for (uint j=0;j<rLine.size();j++)
         {
             const RElement &rElement = model.getElement(rLine.get(j));
-            this->addEdge(int(rElement.getNodeId(0)),int(rElement.getNodeId(1)),int(i));
+            this->addEdge(findNode(rElement,0),findNode(rElement,1),int(i));
         }
     }
 
@@ -67,12 +81,12 @@ void RModelTetraMesh::importModel(const RModel &model, bool reconstruct, const R
         const RElementType elementType = rElement.getType();
         if (elementType == R_ELEMENT_TRI1 || elementType == R_ELEMENT_TRI2)
         {
-            this->addTriangle(int(rElement.getNodeId(0)),int(rElement.getNodeId(1)),int(rElement.getNodeId(2)),surfaceMarkers[i]);
+            this->addTriangle(findNode(rElement,0),findNode(rElement,1),findNode(rElement,2),surfaceMarkers[i]);
         }
         else if (elementType == R_ELEMENT_QUAD1 || elementType == R_ELEMENT_QUAD2)
         {
-            this->addTriangle(int(rElement.getNodeId(0)),int(rElement.getNodeId(1)),int(rElement.getNodeId(2)),surfaceMarkers[i]);
-            this->addTriangle(int(rElement.getNodeId(0)),int(rElement.getNodeId(2)),int(rElement.getNodeId(3)),surfaceMarkers[i]);
+            this->addTriangle(findNode(rElement,0),findNode(rElement,1),findNode(rElement,2),surfaceMarkers[i]);
+            this->addTriangle(findNode(rElement,0),findNode(rElement,2),findNode(rElement,3),surfaceMarkers[i]);
         }
     }
 
@@ -86,14 +100,14 @@ void RModelTetraMesh::importModel(const RModel &model, bool reconstruct, const R
             for (uint j=0;j<rVolume.size();j++)
             {
                 const RElement &rElement = model.getElement(rVolume.get(j));
-                if (rElement.getType() != R_ELEMENT_TETRA1)
+                if (RElement::getLinearType(rElement.getType()) != R_ELEMENT_TETRA1)
                 {
                     continue;
                 }
-                this->addTetrahedron(int(rElement.getNodeId(0)),
-                                     int(rElement.getNodeId(1)),
-                                     int(rElement.getNodeId(2)),
-                                     int(rElement.getNodeId(3)),
+                this->addTetrahedron(findNode(rElement,0),
+                                     findNode(rElement,1),
+                                     findNode(rElement,2),
+                                     findNode(rElement,3),
                                      int(i));
             }
         }
@@ -132,6 +146,8 @@ void RModelTetraMesh::exportMesh(RModel &model, bool keepResults) const
     const uint numberOfVolumeElements = uint(this->tetrahedra.size());
     const uint numberOfElements = numberOfPointElements + numberOfLineElements + numberOfSurfaceElements + numberOfVolumeElements;
     const uint firstVolumeElement = numberOfPointElements + numberOfLineElements + numberOfSurfaceElements;
+    // Mid-edge nodes of the mesh are ordered the same way as those of second order elements.
+    const bool secondOrder = this->getElementOrder() == 2;
 
     // Interpolate results.
     std::vector<RVariable> variables;
@@ -239,10 +255,14 @@ void RModelTetraMesh::exportMesh(RModel &model, bool keepResults) const
         {
             continue;
         }
-        RElement element(R_ELEMENT_TRUSS1);
+        RElement element(secondOrder ? R_ELEMENT_TRUSS2 : R_ELEMENT_TRUSS1);
 
         element.setNodeId(0,uint(rEdge.nodeIDs[0]));
         element.setNodeId(1,uint(rEdge.nodeIDs[1]));
+        if (secondOrder)
+        {
+            element.setNodeId(2,uint(rEdge.midNodeID));
+        }
 
         model.setElement(nElements,element,false);
 
@@ -266,11 +286,18 @@ void RModelTetraMesh::exportMesh(RModel &model, bool keepResults) const
         {
             continue;
         }
-        RElement element(R_ELEMENT_TRI1);
+        RElement element(secondOrder ? R_ELEMENT_TRI2 : R_ELEMENT_TRI1);
 
         element.setNodeId(0,uint(rTriangle.nodeIDs[0]));
         element.setNodeId(1,uint(rTriangle.nodeIDs[1]));
         element.setNodeId(2,uint(rTriangle.nodeIDs[2]));
+        if (secondOrder)
+        {
+            for (uint j=0;j<3;j++)
+            {
+                element.setNodeId(3+j,uint(rTriangle.midNodeIDs[j]));
+            }
+        }
 
         model.setElement(nElements,element,false);
 
@@ -304,12 +331,19 @@ void RModelTetraMesh::exportMesh(RModel &model, bool keepResults) const
     }
     for (const Tetrahedron &rTetrahedron : this->tetrahedra)
     {
-        RElement element(R_ELEMENT_TETRA1);
+        RElement element(secondOrder ? R_ELEMENT_TETRA2 : R_ELEMENT_TETRA1);
 
         element.setNodeId(0,uint(rTetrahedron.nodeIDs[0]));
         element.setNodeId(1,uint(rTetrahedron.nodeIDs[1]));
         element.setNodeId(2,uint(rTetrahedron.nodeIDs[2]));
         element.setNodeId(3,uint(rTetrahedron.nodeIDs[3]));
+        if (secondOrder)
+        {
+            for (uint j=0;j<6;j++)
+            {
+                element.setNodeId(4+j,uint(rTetrahedron.midNodeIDs[j]));
+            }
+        }
 
         model.setElement(nElements,element,false);
         model.getVolume(uint(rTetrahedron.marker)).add(nElements);
