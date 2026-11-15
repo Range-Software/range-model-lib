@@ -11,6 +11,7 @@ set(range_model_lib_tests
     tst_node
     tst_element
     tst_segment
+    tst_intersection_search
     tst_triangle
     tst_polygon
     tst_tetrahedron

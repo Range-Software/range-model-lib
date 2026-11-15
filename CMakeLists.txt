@@ -22,6 +22,8 @@ qt_add_library(range-model-lib
         src/rml_gl_display_properties.cpp
         src/rml_gl_light.cpp
         src/rml_initial_condition.cpp
+        src/rml_intersection_search.cpp
+        src/rml_intersection_search.h
         src/rml_interpolated_element.cpp
         src/rml_interpolated_entity.cpp
         src/rml_interpolated_node.cpp

@@ -1,4 +1,6 @@
 #include <cmath>
+#include <numeric>
+#include <QScopeGuard>
 #include <omp.h>
 #include <stack>
 #include <set>
@@ -12,6 +14,7 @@
 #include <rbl_progress.h>
 
 #include "rml_model.h"
+#include "rml_intersection_search.h"
 #include "rml_file_io.h"
 #include "rml_file_utils.h"
 #include "rml_view_factor_matrix.h"
@@ -5969,85 +5972,42 @@ QList<uint> RModel::findSliverElements(double edgeRatio) const
     return elementIDs;
 } /* RModel::findSliverElements */
 
+static void printIntersectionSearchStatistics(const RIntersectionSearch::Statistics &statistics)
+{
+    RLogger::info("Intersection search: %llu candidate pairs, %llu geometry tests (preparation %.3f s, search %.3f s).\n",
+                  static_cast<unsigned long long>(statistics.candidates), static_cast<unsigned long long>(statistics.tests),
+                  statistics.preparationSeconds, statistics.searchSeconds);
+}
+
 QList<uint> RModel::findIntersectedElements() const
 {
     RLogger::info("Finding intersected elements\n");
     RLogger::indent();
-
-    QVector<bool> intElements;
-    intElements.resize(int(this->getNElements()));
-    intElements.fill(false);
-
-    QVector<RLimitBox> limitBoxes(this->getNElements());
-    for (uint i=0;i<this->getNElements();i++)
-    {
-        this->getElement(i).findLimitBox(this->getNodes(),limitBoxes[i]);
-    }
-
+    bool complete = false;
+    const auto finish = qScopeGuard([&]()
+                                    {
+                                        RProgressFinalize(complete ? QString("Done") : QString());
+                                        RLogger::unindent();
+                                    });
+    RProgressInitialize("Finding intersected elements", true);
+    std::vector<uint> ids(this->getNElements());
+    std::iota(ids.begin(), ids.end(), uint(0));
+    const RIntersectionSearch search(this->getElements(), this->getNodes(), ids);
     RProgressInitialize("Finding intersected elements");
-    const uint64_t n_total = uint64_t(this->getNElements()) * (this->getNElements() - 1) / 2;
-    std::atomic<uint64_t> n_count(0);
-#pragma omp parallel for schedule(dynamic) default(shared)
-    for (int64_t i=0;i<int64_t(this->getNElements());i++)
+    RIntersectionSearch::Statistics statistics;
+    const auto flags = search.detect(&statistics);
+    printIntersectionSearchStatistics(statistics);
+    QList<uint> result;
+    for (size_t i = 0; i < flags.size(); i++)
     {
-#pragma omp critical
+        if (flags[i])
         {
-            RProgressPrint(n_count,n_total);
-        }
-        if ((i % 100) == 0)
-        {
-            if (omp_get_thread_num() == 0)
-            {
-                RProgressPrint(n_count.load(), n_total);
-            }
-        }
-
-        for (int64_t j=i+1;j<int64_t(this->getNElements());j++)
-        {
-            n_count.fetch_add(1, std::memory_order_relaxed);
-            if ((intElements[i] && intElements[j]) || !RLimitBox::areIntersecting(limitBoxes[i],limitBoxes[j]))
-            {
-                continue;
-            }
-
-            QList<RR3Vector> x;
-            if (RElement::findIntersectionPoints(this->getElement(i),this->getElement(uint(j)),this->getNodes(),x,true))
-            {
-#pragma omp critical
-                {
-                    intElements[i] = true;
-                    intElements[j] = true;
-                }
-            }
+            result.append(uint(i));
         }
     }
-    RProgressFinalize("Done");
-
-    uint nIntersected = 0;
-    for (int i=0;i<intElements.size();i++)
-    {
-        if (intElements[i])
-        {
-            nIntersected++;
-        }
-    }
-
-    QList<uint> elementIDs;
-    elementIDs.reserve(int(nIntersected));
-
-    for (int i=0;i<intElements.size();i++)
-    {
-        if (intElements[i])
-        {
-            elementIDs.append(uint(i));
-        }
-    }
-
-    RLogger::unindent();
-
-    return elementIDs;
+    complete = true;
+    return result;
 } /* RModel::findIntersectedElements */
-
 
 uint RModel::breakIntersectedElements(uint nIterations)
 {
@@ -6060,21 +6020,6 @@ uint RModel::breakIntersectedElements(uint nIterations)
     }
     return this->breakIntersectedElements(nIterations,elementIDs);
 } /* RModel::breakIntersectedElements */
-
-
-//! Check if given point is one of the vertices of given element.
-static bool pointIsElementNode(const RElement &rElement, const std::vector<RNode> &nodes, const RR3Vector &point, double tolerance)
-{
-    RNode pointNode(point[0],point[1],point[2]);
-    for (uint i=0;i<rElement.size();i++)
-    {
-        if (nodes[rElement.getNodeId(i)].getDistance(pointNode) < tolerance)
-        {
-            return true;
-        }
-    }
-    return false;
-} /* pointIsElementNode */
 
 
 uint RModel::breakIntersectedElements(uint nIterations, const std::vector<uint> &elementIDs)
@@ -6155,97 +6100,31 @@ uint RModel::breakIntersectedElements(uint nIterations, const std::vector<uint> 
         std::vector< QList<RR3Vector> > intersectionPoints;
         intersectionPoints.resize(bElementIDs.size());
 
-        QVector<RLimitBox> limitBoxes(bElementIDs.size());
-        for (uint i=0;i<bElementIDs.size();i++)
-        {
-            this->getElement(bElementIDs[i]).findLimitBox(this->getNodes(),limitBoxes[i]);
-        }
-
-        // Find intersection points.
+        // One read-only index and parallel team per iteration. Splitting below
+        // changes the geometry, so the next iteration builds a fresh index.
         RLogger::info("Finding intersection points\n");
         RLogger::indent();
-
-        RProgressPrintToLog(false);
-        RProgressInitialize("Finding intersection points");
-
-        for (uint i=0;i<bElementIDs.size();i++)
         {
-            RProgressPrint(i,uint(bElementIDs.size()));
-
-            if (this->getElement(bElementIDs[i]).hasDuplicateNodes())
-            {
-                continue;
-            }
-
-#pragma omp parallel for default(shared)
-            for (int64_t j=int64_t(i)+1;j<int64_t(bElementIDs.size());j++)
-            {
-                if (this->getElement(bElementIDs[uint(j)]).hasDuplicateNodes())
-                {
-                    continue;
-                }
-
-                if (!RLimitBox::areIntersecting(limitBoxes[i],limitBoxes[j]))
-                {
-                    continue;
-                }
-
-                QList<RR3Vector> x;
-                if (RElement::findIntersectionPoints(this->getElement(bElementIDs[i]),this->getElement(bElementIDs[uint(j)]),this->getNodes(),x))
-                {
-#pragma omp critical
-                    {
-                        QList<RR3Vector>::reverse_iterator it;
-                        for (it=x.rbegin();it!=x.rend();++it)
-                        {
-                            // Insert only nodes which are not in the verticies.
-                            // A point which already is a vertex of the element
-                            // can not break it - it would be added as a node,
-                            // produce no new element, and be merged away again
-                            // on every iteration.
-                            bool nodeFound = pointIsElementNode(this->getElement(bElementIDs[i]),this->getNodes(),*it,tolerance);
-                            QList<RR3Vector>::const_iterator cit;
-                            if (!nodeFound)
-                            {
-                                for (cit=intersectionPoints[i].constBegin();cit!=intersectionPoints[i].constEnd();++cit)
-                                {
-                                    if (RR3Vector::findDistance(*it,*cit) < tolerance)
-                                    {
-                                        nodeFound = true;
-                                        break;
-                                    }
-                                }
-                            }
-                            if (!nodeFound)
-                            {
-                                intersectionPoints[i].append(*it);
-                                intersectionFound = true;
-                            }
-                            nodeFound = pointIsElementNode(this->getElement(bElementIDs[uint(j)]),this->getNodes(),*it,tolerance);
-                            if (!nodeFound)
-                            {
-                                for (cit=intersectionPoints[uint(j)].constBegin();cit!=intersectionPoints[uint(j)].constEnd();++cit)
-                                {
-                                    if (RR3Vector::findDistance(*it,*cit) < tolerance)
-                                    {
-                                        nodeFound = true;
-                                        break;
-                                    }
-                                }
-                            }
-                            if (!nodeFound)
-                            {
-                                intersectionPoints[uint(j)].append(*it);
-                                intersectionFound = true;
-                            }
-                        }
-                    }
-                }
-            }
+            bool complete = false;
+            const auto finish = qScopeGuard([&]()
+                                            {
+                                                RProgressFinalize(complete ? QString("Done") : QString());
+                                                RLogger::unindent();
+                                            });
+            RProgressPrintToLog(false);
+            RProgressInitialize("Finding intersection points", true);
+            const RIntersectionSearch search(this->getElements(), this->getNodes(), bElementIDs, true);
+            RProgressInitialize("Finding intersection points");
+            RIntersectionSearch::Statistics statistics;
+            intersectionPoints = search.findPoints(tolerance, &statistics);
+            printIntersectionSearchStatistics(statistics);
+            intersectionFound = std::any_of(intersectionPoints.begin(), intersectionPoints.end(),
+                                            [](const QList<RR3Vector> &points)
+                                            {
+                                                return !points.empty();
+                                            });
+            complete = true;
         }
-
-        RProgressFinalize("Done");
-        RLogger::unindent();
 
         uint nIntersectedFound = 0;
 

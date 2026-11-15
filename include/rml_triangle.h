@@ -79,6 +79,10 @@ class RTriangle
         //! Return true if intersection was found.
         bool findTriangleIntersection(const RTriangle &triangle, QList<RR3Vector> &x, bool testOnly = false) const;
 
+        //! Boolean intersection test with the same contact and tolerance policy.
+        //! Skew triangles stop at the first accepted point without collecting a list.
+        bool intersects(const RTriangle &triangle) const;
+
         //! Return true if point is inside the triangle.
         bool isPointInside ( const RR3Vector &point, bool includeNodes = true ) const;
 

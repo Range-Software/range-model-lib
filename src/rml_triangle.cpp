@@ -296,6 +296,51 @@ bool RTriangle::findTriangleIntersection(const RTriangle &triangle, QList<RR3Vec
     return intersectionFound;
 }
 
+bool RTriangle::intersects(const RTriangle &triangle) const
+{
+    RR3Vector crossNormals;
+    RR3Vector::cross(this->getNormal(), triangle.getNormal(), crossNormals);
+    if (RR3Vector::euclideanNorm(crossNormals) < 1.0e-5)
+    {
+        // Keep the existing coplanar/near-parallel policy, including containment,
+        // shared edges and duplicate triangles. Only skew pairs take the fast path.
+        QList<RR3Vector> ignored;
+        return this->findTriangleIntersection(triangle, ignored, true);
+    }
+    const double tolerance = RConstants::eps * 100.0;
+    auto atNode = [&](const RTriangle &t, const RR3Vector &p)
+    {
+        return RR3Vector::findDistance(t.getNode1().toVector(), p) < tolerance || RR3Vector::findDistance(t.getNode2().toVector(), p) < tolerance || RR3Vector::findDistance(t.getNode3().toVector(), p) < tolerance;
+    };
+    auto edgesIntersect = [&](const RTriangle &target, const RTriangle &source)
+    {
+        const RNode *vertices[3] = {&source.node1, &source.node2, &source.node3};
+        const uint ids[3] = {source.node1ID, source.node2ID, source.node3ID};
+        RR3Vector point;
+        for (int i = 0; i < 3; i++)
+        {
+            const int next = (i + 1) % 3;
+            RSegment segment(*vertices[i], *vertices[next]);
+            segment.setNodeIDs(ids[i], ids[next]);
+            double u = 0.0;
+            if (!target.findSegmentIntersection(segment, point, u) || !R_IS_IN_CLOSED_INTERVAL(0.0, 1.0, u))
+            {
+                continue;
+            }
+            if (atNode(*this, point) && atNode(triangle, point))
+            {
+                continue;
+            }
+            if (this->isPointInside(point, false) || triangle.isPointInside(point, false))
+            {
+                return true;
+            }
+        }
+        return false;
+    };
+    return edgesIntersect(*this, triangle) || edgesIntersect(triangle, *this);
+}
+
 bool RTriangle::isPointInside(const RR3Vector &point, bool includeNodes) const
 {
     if (this->isPointAtNode(point) != RConstants::eod)

@@ -2,6 +2,18 @@
 
 ### Improvements
 
+- Element intersection detection and intersection-point collection use a shared,
+  operation-local bounding-box hierarchy and cached surface triangulations instead
+  of scanning every element pair. Splitting rebuilds the hierarchy after each
+  iteration changes the geometry
+- Parallel intersection searches collect results per worker, avoiding concurrent
+  reads and writes of shared intersection flags. Intersection points are sorted
+  before tolerance merging, giving the same result across worker schedules.
+  Progress is updated in batches rather than with an atomic increment per pair;
+  the log reports candidate counts, geometry tests and preparation/search timings
+- **RTriangle::intersects()** new: boolean intersection testing stops at the first
+  accepted point for skew triangles. Coplanar and nearly parallel triangles retain
+  the existing predicate, contact rules and tolerances
 - **RMeshInput** selects the Range mesh generator by default. TetGen remains
   available through `setGeneratorType()`
 
