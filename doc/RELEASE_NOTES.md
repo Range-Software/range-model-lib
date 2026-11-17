@@ -2,6 +2,12 @@
 
 ### Improvements
 
+- Result-driven mesh sizes use spatial gradients of all variable components,
+  including vector direction changes, rather than differences of magnitudes.
+  Flat and negligible-gradient regions retain the coarsest requested size;
+  constant fields produce finite sizes instead of dividing by zero. Element
+  results are interpolated to nodes before gradient estimation
+
 - Element intersection detection and intersection-point collection use a shared,
   operation-local bounding-box hierarchy and cached surface triangulations instead
   of scanning every element pair. Splitting rebuilds the hierarchy after each

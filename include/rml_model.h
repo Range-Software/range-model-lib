@@ -890,7 +890,9 @@ class RModel : public RProblem, public RResults
         //! Tetrahedralize surface.
         uint tetrahedralizeSurface(const std::vector<uint> surfaceIDs);
 
-        //! Generate vector of mesh size values for each node.
+        //! Generate nodal mesh sizes from spatial changes of the selected variable components.
+        //! Zero/negligible gradients use maxValue; the strongest gradients approach minValue.
+        //! trimValueRatio controls saturation relative to the maximum gradient (0 to less than 1).
         RRVector generateMeshSizeFunction(const QSet<RVariableType> variableTypes, double minValue, double maxValue, double trimValueRatio) const;
 
         //! Generate input parameters for TetGen mesh generator.

@@ -6811,104 +6811,117 @@ RRVector RModel::generateMeshSizeFunction(const QSet<RVariableType> variableType
 
     RRVector nodeWeights(this->getNNodes(),0.0);
 
+    // Compare spatial changes, including vector direction, rather than magnitudes.
+    // Normalize each variable separately so that different units can be combined.
     foreach (RVariableType variableType, variableTypes)
     {
-        uint variablePosition = this->findVariable(variableType);
-
+        const uint variablePosition = this->findVariable(variableType);
         if (variablePosition == RConstants::eod)
         {
             continue;
         }
         const RVariable &rVariable = this->getVariable(variablePosition);
-        if (rVariable.getType() != variableType)
+        const bool onNodes = rVariable.getApplyType() == R_VARIABLE_APPLY_NODE;
+        if ((!onNodes && rVariable.getApplyType() != R_VARIABLE_APPLY_ELEMENT)
+            || rVariable.getNValues() != (onNodes ? this->getNNodes() : this->getNElements()))
         {
             continue;
-
         }
 
-        RRVector nodeValues(this->getNNodes());
-
-        if (rVariable.getApplyType() == R_VARIABLE_APPLY_NODE)
+        std::vector<RRVector> components(rVariable.getNVectors());
+        double valueScale = 0.0;
+        for (uint j=0;j<rVariable.getNVectors();j++)
         {
-            double minValue = rVariable.getMinValue();
-            double maxValue = rVariable.getMaxValue();
-            double magValue = maxValue - minValue;
-            if (magValue == 0.0)
+            if (onNodes)
             {
-                continue;
+                components[j] = rVariable.getValues(j);
             }
-            for (uint i=0;i<rVariable.getNValues();i++)
+            else
             {
-                nodeValues[i] = (rVariable.getValue(i) - minValue) / magValue;
+                components[j].resize(this->getNNodes());
+                RBVector explicitFlags(this->getNElements(),false);
+                this->convertElementToNodeVector(rVariable.getValues(j),explicitFlags,components[j]);
             }
-        }
-        else
-        {
-            RVariable newVariable(rVariable);
-            newVariable.setApplyType(R_VARIABLE_APPLY_NODE);
-            newVariable.resize(rVariable.getNVectors(),this->getNNodes());
-#pragma omp parallel for default(shared)
-            for (int64_t j=0;j<int64_t(rVariable.getNVectors());j++)
+            for (double value : components[j])
             {
-                RRVector elementValues = rVariable.getValues(uint(j));
-                RRVector lNodeValues(this->getNNodes());
-                RBVector explicitFlags;
-                explicitFlags.resize(this->getNElements(),false);
-                this->convertElementToNodeVector(elementValues,explicitFlags,lNodeValues);
-                for (uint k=0;k<this->getNNodes();k++)
+                if (std::isfinite(value))
                 {
-                    newVariable.setValue(uint(j),k,lNodeValues[k]);
+                    valueScale = std::max(valueScale,std::abs(value));
                 }
             }
-            double minValue = newVariable.getMinValue();
-            double maxValue = newVariable.getMaxValue();
-            double magValue = maxValue - minValue;
-            if (magValue == 0.0)
-            {
-                continue;
-            }
-#pragma omp parallel for default(shared)
-            for (int64_t i=0;i<int64_t(newVariable.getNValues());i++)
-            {
-                nodeValues[uint(i)] = (newVariable.getValue(uint(i)) - minValue) / magValue;
-            }
+        }
+        if (valueScale == 0.0)
+        {
+            continue;
         }
 
+        // Compute per-element contributions in parallel, then reduce onto nodes.
+        // This avoids a shared critical section for every pair of nodes.
+        RRVector elementGradients(this->getNElements(),0.0);
 #pragma omp parallel for default(shared)
         for (int64_t i=0;i<int64_t(this->getNElements());i++)
         {
             const RElement &rElement = this->getElement(uint(i));
+            double gradient = 0.0;
             for (uint j=0;j<rElement.size();j++)
             {
-                uint nodeId1 = rElement.getNodeId(j);
+                const uint nodeId1 = rElement.getNodeId(j);
                 for (uint k=j+1;k<rElement.size();k++)
                 {
-                    uint nodeId2 = rElement.getNodeId(k);
-                    double nodeWeight = std::abs(nodeValues[nodeId1] - nodeValues[nodeId2]);
-#pragma omp critical
+                    const uint nodeId2 = rElement.getNodeId(k);
+                    const double distance = this->getNode(nodeId1).getDistance(this->getNode(nodeId2));
+                    if (!(distance > 0.0) || !std::isfinite(distance))
                     {
-                        nodeWeights[nodeId1] = std::max(nodeWeights[nodeId1],nodeWeight);
-                        nodeWeights[nodeId2] = std::max(nodeWeights[nodeId2],nodeWeight);
+                        continue;
+                    }
+                    double change = 0.0;
+                    for (const RRVector &component : components)
+                    {
+                        double delta = component[nodeId1]/valueScale - component[nodeId2]/valueScale;
+                        // Ignore roundoff around a constant (possibly large) offset.
+                        if (std::abs(delta) <= 64.0*DBL_EPSILON)
+                        {
+                            delta = 0.0;
+                        }
+                        change = std::hypot(change,delta);
+                    }
+                    const double pairGradient = change/distance;
+                    if (std::isfinite(pairGradient))
+                    {
+                        gradient = std::max(gradient,pairGradient);
                     }
                 }
+            }
+            elementGradients[uint(i)] = gradient;
+        }
+
+        const double maxGradient = elementGradients.empty() ? 0.0 : RStatistics::findMaximumValue(elementGradients);
+        if (!(maxGradient > 0.0))
+        {
+            continue;
+        }
+        const double trim = std::isfinite(trimValueRatio) ? std::clamp(trimValueRatio,0.0,1.0-DBL_EPSILON) : 0.0;
+        const double saturationGradient = (1.0-trim)*maxGradient;
+        for (uint i=0;i<this->getNElements();i++)
+        {
+            // Changes below 0.1% of the strongest spatial gradient stay coarse.
+            const double weight = elementGradients[i] <= 1e-3*maxGradient ? 0.0
+                                : std::min(1.0,elementGradients[i]/saturationGradient);
+            const RElement &rElement = this->getElement(i);
+            for (uint j=0;j<rElement.size();j++)
+            {
+                const uint nodeID = rElement.getNodeId(j);
+                nodeWeights[nodeID] = std::max(nodeWeights[nodeID],weight);
             }
         }
     }
 
-    double minWeight = RStatistics::findMinimumValue(nodeWeights);
-    double maxWeight = RStatistics::findMaximumValue(nodeWeights);
-
-    maxWeight = maxWeight - trimValueRatio * (maxWeight - minWeight);
-
-    double scaleWeight = maxWeight - minWeight;
-    double scaleValue = maxValue - minValue;
-
-    RRVector meshSizes(this->getNNodes(),0.0);
-
+    // Keep zero gradient anchored at the coarsest size, including constant fields.
+    RRVector meshSizes(this->getNNodes(),maxValue);
 #pragma omp parallel for default(shared)
     for (int64_t i=0;i<int64_t(this->getNNodes());i++)
     {
-        meshSizes[uint(i)] = ((1.0 - (std::min(nodeWeights[uint(i)],maxWeight) - minWeight) / scaleWeight) * scaleValue) + minValue;
+        meshSizes[uint(i)] = maxValue - nodeWeights[uint(i)]*(maxValue-minValue);
     }
 
     return meshSizes;
