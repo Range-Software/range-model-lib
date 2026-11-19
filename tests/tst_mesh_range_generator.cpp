@@ -1,9 +1,11 @@
 #include <QTest>
 
+#include <algorithm>
 #include <cmath>
 
 #include "rml_mesh_generator.h"
 #include "rml_model.h"
+#include "rml_model_stl.h"
 
 //! Mesh generation with the Range mesh generator (range-element-lib).
 class TestMeshRangeGenerator : public QObject
@@ -229,6 +231,7 @@ class TestMeshRangeGenerator : public QObject
         void keepResults_data();
         void keepResults();
         void sameVolumeAsTetGen();
+        void facetTriangulatedDifferently();
 };
 
 void TestMeshRangeGenerator::generatorName()
@@ -374,6 +377,40 @@ void TestMeshRangeGenerator::sameVolumeAsTetGen()
     QCOMPARE(rangeModel.getNLines(),tetGenModel.getNLines());
     QCOMPARE(rangeModel.getNSurfaces(),tetGenModel.getNSurfaces());
     QCOMPARE(rangeModel.getNVolumes(),tetGenModel.getNVolumes());
+}
+
+void TestMeshRangeGenerator::facetTriangulatedDifferently()
+{
+    // Near-coplanar vertices make the tetrahedralization triangulate some planar facets of this
+    // model differently from their subfaces. Splitting the missing subfaces alone never recovers
+    // them: their parts converge to a point until they reach the minimum split length.
+    // Only the boundary mesh is generated, quality refinement of this model takes minutes.
+    const QString fileName = QFINDTESTDATA("../../fea/data/SimpleUnderBonnetGeom.stl");
+    QVERIFY(!fileName.isEmpty());
+    RModelStl modelStl;
+    modelStl.read(fileName);
+    RModel model(modelStl);
+    const double area = findArea(model);
+    QVERIFY(area > 0.0);
+
+    RMeshInput meshInput = createMeshInput(0.0);
+    meshInput.setQualityMesh(false);
+    RMeshGenerator::generate(meshInput,model);
+
+    QVERIFY(findVolume(model) > 0.0);
+    QVERIFY(std::fabs(findArea(model) - area) < 1.0e-9 * area);
+
+    // Nodes which were added and removed again during boundary recovery must not be left behind.
+    std::vector<bool> used(model.getNNodes(),false);
+    for (uint i=0;i<model.getNElements();i++)
+    {
+        const RElement &rElement = model.getElement(i);
+        for (uint j=0;j<rElement.size();j++)
+        {
+            used[rElement.getNodeId(j)] = true;
+        }
+    }
+    QVERIFY(std::all_of(used.begin(),used.end(),[](bool isUsed) { return isUsed; }));
 }
 
 QTEST_APPLESS_MAIN(TestMeshRangeGenerator)
