@@ -21,6 +21,7 @@ set(range_model_lib_tests
     tst_time_solver
     tst_step
     tst_surface_normals
+    tst_surface_reconstruction
     tst_entity_group_data
     tst_model_file_version
     tst_smoothed_variable

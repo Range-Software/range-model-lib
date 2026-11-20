@@ -17,6 +17,7 @@
 #include "rml_patch_input.h"
 #include "rml_point.h"
 #include "rml_surface.h"
+#include "rml_surface_reconstructor.h"
 #include "rml_volume.h"
 #include "rml_results.h"
 #include "rml_mesh_input.h"
@@ -337,6 +338,12 @@ class RModel : public RProblem, public RResults
 
         //! Purge unused elements.
         uint purgeUnusedElements();
+
+        //! Remove elements marked in element book.
+        //! If elementBook[i] == RConstants::eod then element i is removed,
+        //! references to removed elements are dropped from element groups.
+        //! Return number of removed elements.
+        uint removeElementsByBook(const std::vector<uint> &elementBook);
 
         /*************************************************************
          * Interpolated element interface                            *
@@ -889,6 +896,17 @@ class RModel : public RProblem, public RResults
 
         //! Tetrahedralize surface.
         uint tetrahedralizeSurface(const std::vector<uint> surfaceIDs);
+
+        //! Reconstruct (retriangulate) surfaces.
+        //! Removes tiny and sliver triangles, merges coplanar triangles and removes
+        //! nodes which do not define the shape (nodes inside planar regions and on
+        //! straight feature lines). Existing nodes are never moved, new nodes are
+        //! created on the existing surface only by optional quality refinement.
+        //! Only linear triangles are processed, nodes and edges shared with any other
+        //! element (lines, points, unselected surfaces) are preserved.
+        //! Throws RError if selected surfaces are attached to volume elements.
+        RSurfaceReconstructor::Statistics reconstructSurfaces(const std::vector<uint> &surfaceIDs,
+                                                              const RSurfaceReconstructor::Options &options = RSurfaceReconstructor::Options());
 
         //! Generate nodal mesh sizes from spatial changes of the selected variable components.
         //! Zero/negligible gradients use maxValue; the strongest gradients approach minValue.

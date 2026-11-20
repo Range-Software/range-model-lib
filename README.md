@@ -11,6 +11,7 @@
 - `RMeshGenerator`, `RMeshInput`, `RMeshSetup` — interface to tetrahedral mesh generators: TetGen (`RTetGen`) and the Range mesh generator from `range-element-lib` (`RModelTetraMesh`), selected by `RMeshInput::setGeneratorType()`
 - `RMeshResultsInterpolator` — interpolation of results to a newly generated mesh
 - `RShapeGenerator` — parametric shape creation
+- `RSurfaceReconstructor` — surface retriangulation (`RModel::reconstructSurfaces()`): collapses tiny edges, merges coplanar triangles by constrained Delaunay retriangulation of planar regions, removes nodes inside planar regions and on straight feature lines, removes sliver triangles and optionally finishes with Delaunay edge flips and quality meshing (Delaunay refinement with node insertion on the existing surface, target minimum angle and maximum edge length); existing nodes are never moved, watertightness and orientation are preserved and no new self-intersections are created
 
 **Physics setup**
 - `RBoundaryCondition`, `RInitialCondition`, `REnvironmentCondition` — typed conditions attached to entity groups, each carrying time-dependent `RConditionComponent` values

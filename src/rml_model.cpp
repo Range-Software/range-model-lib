@@ -2104,8 +2104,6 @@ uint RModel::purgeUnusedElements()
     // Find unused elements
     std::vector<uint> elementBook(this->getNElements(),RConstants::eod);
 
-    uint ne = this->getNElements();
-
 #pragma omp parallel for default(shared)
     for (int64_t i=0;i<int64_t(nElementGroups);i++)
     {
@@ -2116,25 +2114,40 @@ uint RModel::purgeUnusedElements()
         }
     }
 
-    RLogger::info("Removing unused elements\n");
+    uint nRemoved = this->removeElementsByBook(elementBook);
+
+    RLogger::unindent();
+
+    return nRemoved;
+} /* RModel::purgeUnusedElements */
+
+
+uint RModel::removeElementsByBook(const std::vector<uint> &book)
+{
+    R_ERROR_ASSERT(book.size() == this->getNElements());
+
+    uint nElementGroups = this->getNElementGroups();
+    uint ne = this->getNElements();
+
+    RLogger::info("Removing elements\n");
     RLogger::indent();
-    // Remove unused elements
+    // Remove elements
     std::vector<RElement> elementsNew;
     elementsNew.reserve(ne);
     for (uint i=0;i<ne;i++)
     {
-        if (elementBook[i] != RConstants::eod)
+        if (book[i] != RConstants::eod)
         {
             elementsNew.push_back(this->elements[i]);
         }
     }
     this->elements = elementsNew;
     elementsNew.resize(0);
-    this->RResults::removeElements(elementBook);
+    this->RResults::removeElements(book);
     RLogger::unindent();
 
-    RLogger::info("Fixing element ID references in element groups\n");
-    // Fix element ID references in element groups
+    // New element IDs
+    std::vector<uint> elementBook(book);
     uint nElements = 0;
     for (uint i=0;i<elementBook.size();i++)
     {
@@ -2144,13 +2157,24 @@ uint RModel::purgeUnusedElements()
         }
     }
 
+    RLogger::info("Fixing element ID references in element groups\n");
+    // Fix element ID references in element groups, drop references to removed elements
 #pragma omp parallel for default(shared)
     for (int64_t i=0;i<int64_t(nElementGroups);i++)
     {
         RElementGroup *pElementGroup = this->getElementGroupPtr(uint(i));
+        uint nKept = 0;
         for (uint j=0;j<pElementGroup->size();j++)
         {
-            pElementGroup->set(j,elementBook[pElementGroup->get(j)]);
+            uint elementID = elementBook[pElementGroup->get(j)];
+            if (elementID != RConstants::eod)
+            {
+                pElementGroup->set(nKept++,elementID);
+            }
+        }
+        if (nKept != pElementGroup->size())
+        {
+            pElementGroup->resize(nKept);
         }
     }
 
@@ -2223,10 +2247,9 @@ uint RModel::purgeUnusedElements()
         this->volumeNeigs = volumeNeigsNew;
         volumeNeigsNew.resize(0);
     }
-    RLogger::unindent();
 
     return ne - this->getNElements();
-} /* RModel::purgeUnusedElements */
+} /* RModel::removeElementsByBook */
 
 
 /*********************************************************************
@@ -6800,6 +6823,150 @@ uint RModel::tetrahedralizeSurface(const std::vector<uint> surfaceIDs)
 
     return uint(volumeElements.size());
 } /* RModel::tetrahedralizeSurface */
+
+
+RSurfaceReconstructor::Statistics RModel::reconstructSurfaces(const std::vector<uint> &surfaceIDs, const RSurfaceReconstructor::Options &options)
+{
+    RLogger::info("Reconstructing surfaces\n");
+    RLogger::indent();
+    QScopeGuard indentGuard([]{ RLogger::unindent(); });
+
+    // Select linear triangles of given surfaces.
+    std::vector<uint> elementSurfaces(this->getNElements(),RConstants::eod);
+    uint nSkipped = 0;
+    for (uint surfaceID : surfaceIDs)
+    {
+        if (surfaceID >= this->getNSurfaces())
+        {
+            throw RError(RError::Type::InvalidInput,R_ERROR_REF,"Surface ID %u is out of range (%u surfaces).",surfaceID,this->getNSurfaces());
+        }
+        const RSurface &rSurface = this->getSurface(surfaceID);
+        for (uint j=0;j<rSurface.size();j++)
+        {
+            uint elementID = rSurface.get(j);
+            if (this->getElement(elementID).getType() != R_ELEMENT_TRI1)
+            {
+                nSkipped++;
+                continue;
+            }
+            if (elementSurfaces[elementID] == RConstants::eod)
+            {
+                elementSurfaces[elementID] = surfaceID;
+            }
+        }
+    }
+    if (nSkipped > 0)
+    {
+        RLogger::warning("%u non-linear-triangle elements were skipped and will be preserved.\n",nSkipped);
+    }
+
+    std::vector<bool> selectedNodes(this->getNNodes(),false);
+    std::vector<RSurfaceReconstructor::Triangle> triangles;
+    for (uint i=0;i<this->getNElements();i++)
+    {
+        if (elementSurfaces[i] == RConstants::eod)
+        {
+            continue;
+        }
+        const RElement &rElement = this->getElement(i);
+        RSurfaceReconstructor::Triangle triangle;
+        for (uint j=0;j<3;j++)
+        {
+            triangle.nodes[j] = rElement.getNodeId(j);
+            selectedNodes[triangle.nodes[j]] = true;
+        }
+        triangle.surfaceID = elementSurfaces[i];
+        triangles.push_back(triangle);
+    }
+
+    // Lock nodes and edges shared with other elements.
+    std::vector<bool> lockedNodes(this->getNNodes(),false);
+    std::vector<std::pair<uint,uint>> lockedEdges;
+    for (uint i=0;i<this->getNElements();i++)
+    {
+        if (elementSurfaces[i] != RConstants::eod)
+        {
+            continue;
+        }
+        const RElement &rElement = this->getElement(i);
+        bool isAttached = false;
+        for (uint j=0;j<rElement.size() && !isAttached;j++)
+        {
+            isAttached = selectedNodes[rElement.getNodeId(j)];
+        }
+        if (!isAttached)
+        {
+            continue;
+        }
+        if (R_ELEMENT_TYPE_IS_VOLUME(rElement.getType()))
+        {
+            throw RError(RError::Type::InvalidInput,R_ERROR_REF,"Selected surfaces are attached to volume elements. Remove volume mesh before reconstructing surfaces.");
+        }
+        for (uint j=0;j<rElement.size();j++)
+        {
+            lockedNodes[rElement.getNodeId(j)] = true;
+        }
+        uint nCorners = RElement::getNCornerNodes(rElement.getType());
+        if (nCorners == 2)
+        {
+            lockedEdges.push_back({rElement.getNodeId(0),rElement.getNodeId(1)});
+        }
+        else if (nCorners > 2)
+        {
+            for (uint j=0;j<nCorners;j++)
+            {
+                lockedEdges.push_back({rElement.getNodeId(j),rElement.getNodeId((j+1)%nCorners)});
+            }
+        }
+    }
+
+    RSurfaceReconstructor reconstructor(this->nodes,triangles,lockedNodes,lockedEdges,options);
+    RSurfaceReconstructor::Statistics statistics;
+    std::vector<RSurfaceReconstructor::Triangle> newTriangles = reconstructor.reconstruct(statistics);
+
+    // Replace selected triangles.
+    std::vector<uint> elementBook(this->getNElements(),0);
+    for (uint i=0;i<this->getNElements();i++)
+    {
+        if (elementSurfaces[i] != RConstants::eod)
+        {
+            elementBook[i] = RConstants::eod;
+        }
+    }
+    this->removeElementsByBook(elementBook);
+
+    // New nodes (quality refinement) follow existing nodes.
+    for (const RNode &rNode : reconstructor.getNewNodes())
+    {
+        this->addNode(rNode);
+    }
+
+    for (const RSurfaceReconstructor::Triangle &triangle : newTriangles)
+    {
+        RElement element(R_ELEMENT_TRI1);
+        for (uint j=0;j<3;j++)
+        {
+            element.setNodeId(j,triangle.nodes[j]);
+        }
+        this->addElement(element,true,triangle.surfaceID);
+    }
+
+    this->purgeUnusedNodes();
+
+    // Element connectivity has changed.
+    this->clearSurfaceNeighbors();
+    this->clearVolumeNeighbors();
+
+    for (uint surfaceID : surfaceIDs)
+    {
+        if (this->getSurface(surfaceID).size() == 0)
+        {
+            RLogger::warning("Surface %u is empty after reconstruction.\n",surfaceID);
+        }
+    }
+
+    return statistics;
+} /* RModel::reconstructSurfaces */
 
 
 RRVector RModel::generateMeshSizeFunction(const QSet<RVariableType> variableTypes, double minValue, double maxValue, double trimValueRatio) const
